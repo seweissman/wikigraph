@@ -20,14 +20,17 @@
     <path refid="lib.path.id" />
     <fileset dir="${dist.dir}" />
   </path>
+<path id="streaming.path.id">
+    <fileset dir="${lib.dir}/" includes="hadoop-streaming*.jar"/>
+</path>
   <path id="libjars.path.id">
-<!--    <fileset dir="${lib.dir}/" includes="cloud9*.jar"/>
+    <fileset dir="${lib.dir}/" includes="cloud9*.jar"/>
     <fileset dir="${lib.dir}/" includes="guava*.jar"/>
     <fileset dir="${lib.dir}/" includes="bliki*.jar"/>
     <fileset dir="${lib.dir}/" includes="ivory*.jar"/>
     <fileset dir="${lib.dir}/" includes="tools*.jar"/>
     <fileset dir="${lib.dir}/" includes="maxent*.jar"/>
-    <fileset dir="${lib.dir}/" includes="wikiclean*.jar"/> -->
+    <fileset dir="${lib.dir}/" includes="wikiclean*.jar"/>
   </path>
 
   <property name="ivy.install.version" value="2.2.0"/>
@@ -141,6 +144,7 @@
     <pathconvert property="run.path.id" refid="run.path.id" targetos="${platform}" />
     <pathconvert property="lib.path.id" refid="lib.path.id" targetos="${platform}" />
     <pathconvert property="libjars.path.id" refid="libjars.path.id" targetos="${platform}" pathsep="," />
+    <pathconvert property="streaming.path.id" refid="streaming.path.id" targetos="${platform}" pathsep="," />
 
     <property name="suffix" value="sh" />
     <property name="param_prefix" value="$" />
@@ -164,6 +168,9 @@
 
     <echo file="./etc/hadoop-text.${suffix}" message="${script_prefix}" />
     <echo file="./etc/hadoop-text.${suffix}" message="hadoop fs -libjars ${libjars.path.id} -text ${param_prefix}1 ${param_prefix}2 ${param_prefix}3 ${param_prefix}4 ${param_prefix}5 ${param_prefix}6 ${param_prefix}7 ${param_prefix}8 ${param_prefix}9 ${param_prefix}{10} ${param_prefix}{11} ${param_prefix}{12} ${param_prefix}{13} ${param_prefix}{14} ${param_prefix}{15} ${param_prefix}{16} ${param_prefix}{17} ${param_prefix}{18} ${param_prefix}{19} ${param_prefix}{20} ${param_prefix}{21} ${param_prefix}{22} ${param_prefix}{23} ${param_prefix}{24} ${param_prefix}{25} ${param_prefix}{26} ${param_prefix}{27} ${param_prefix}{28} ${param_prefix}{29} ${param_prefix}{30} ${param_prefix}{31} ${param_prefix}{32} ${param_prefix}{33} ${param_prefix}{34} ${param_prefix}{35} ${param_prefix}{36} ${param_prefix}{37} ${param_prefix}{38} ${param_prefix}{39}${line.separator}" append="true" />
+
+    <echo file="./etc/hadoop-stream.${suffix}" message="${script_prefix}" />
+    <echo file="./etc/hadoop-stream.${suffix}" message="hadoop jar ${streaming.path.id} -libjars ${libjars.path.id} ${param_prefix}1 ${param_prefix}2 ${param_prefix}3 ${param_prefix}4 ${param_prefix}5 ${param_prefix}6 ${param_prefix}7 ${param_prefix}8 ${param_prefix}9 ${param_prefix}{10} ${param_prefix}{11} ${param_prefix}{12} ${param_prefix}{13} ${param_prefix}{14} ${param_prefix}{15} ${param_prefix}{16} ${param_prefix}{17} ${param_prefix}{18} ${param_prefix}{19} ${param_prefix}{20} ${param_prefix}{21} ${param_prefix}{22} ${param_prefix}{23} ${param_prefix}{24} ${param_prefix}{25} ${param_prefix}{26} ${param_prefix}{27} ${param_prefix}{28} ${param_prefix}{29} ${param_prefix}{30} ${param_prefix}{31} ${param_prefix}{32} ${param_prefix}{33} ${param_prefix}{34} ${param_prefix}{35} ${param_prefix}{36} ${param_prefix}{37} ${param_prefix}{38} ${param_prefix}{39}${line.separator}" append="true" />
 
      <chmod dir="./etc/" perm="ugo+rx" includes="**/*.sh"/>
   </target>

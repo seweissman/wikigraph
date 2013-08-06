@@ -1,44 +1,37 @@
 package wikigraph;
 
 
-	import java.io.IOException;
-	import java.util.regex.Matcher;
-	import java.util.regex.Pattern;
+import java.io.IOException;
+import java.util.regex.Matcher;
 
-	import org.apache.commons.cli.CommandLine;
-	import org.apache.commons.cli.CommandLineParser;
-	import org.apache.commons.cli.GnuParser;
-	import org.apache.commons.cli.HelpFormatter;
-	import org.apache.commons.cli.OptionBuilder;
-	import org.apache.commons.cli.Options;
-	import org.apache.commons.cli.ParseException;
-	import org.apache.hadoop.conf.Configured;
-	import org.apache.hadoop.fs.FileSystem;
-	import org.apache.hadoop.fs.FileUtil;
-	import org.apache.hadoop.fs.Path;
-	import org.apache.hadoop.io.IntWritable;
-	import org.apache.hadoop.mapred.FileInputFormat;
-	import org.apache.hadoop.mapred.FileOutputFormat;
-	import org.apache.hadoop.mapred.JobClient;
-	import org.apache.hadoop.mapred.JobConf;
-	import org.apache.hadoop.mapred.MapReduceBase;
-	import org.apache.hadoop.mapred.Mapper;
-	import org.apache.hadoop.mapred.OutputCollector;
-	import org.apache.hadoop.mapred.Reporter;
-	import org.apache.hadoop.mapred.SequenceFileInputFormat;
-	import org.apache.hadoop.mapred.SequenceFileOutputFormat;
-	import org.apache.hadoop.util.Tool;
-	import org.apache.hadoop.util.ToolRunner;
-	import org.apache.log4j.Logger;
-	import org.wikiclean.WikiClean;
-	import org.wikiclean.WikiClean.WikiLanguage;
-	import org.wikiclean.WikiCleanBuilder;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
-	import edu.umd.cloud9.io.array.ArrayListOfLongsWritable;
-	import edu.umd.cloud9.io.array.ArrayListWritable;
-	import edu.umd.cloud9.io.pair.PairOfInts;
-	import edu.umd.cloud9.io.pair.PairOfStringInt;
-	import edu.umd.cloud9.io.pair.PairOfStrings;
+import edu.umd.cloud9.io.pair.PairOfInts;
+import edu.umd.cloud9.io.pair.PairOfStrings;
 	
 	public class BuildGraph extends Configured implements Tool {
 	    private static final Logger LOG = Logger.getLogger(BuildGraph.class);
@@ -60,95 +53,30 @@ package wikigraph;
 	     */
 
 	    private static class LanguageMapper extends MapReduceBase implements
-	    Mapper<IntWritable, WikipediaPage, PairOfInts, PairOfStrings> {
+	    Mapper<IntWritable, Text, PairOfInts, PairOfStrings> {
 	    //Mapper<LongWritable, WikipediaPage, ArrayListOfLongsWritable, PairOfStringInt> {
 	        
 	        static String lang;
-	        //Adapted from http://stackoverflow.com/questions/5553410/regular-expression-match-a-sentence
-	        static final Pattern sentenceregex = Pattern.compile(
-	                "# Match a sentence ending in punctuation or EOS.\n" +
-	                        "[\\s]*    # Leading white space\n" + 
-	                        "([A-Z\"]    # First char capital letter or quotation\n" +
-	                        "[^.!?\\n]*      # Greedily consume up to punctuation.\n" +
-	                        "(?:          # Group for unrolling the loop.\n" +
-	                        "  [.!?]      # (special) inner punctuation ok if\n" +
-	                        "  (?!['\"]?\\s|$)  # not followed by ws or EOS.\n" +
-	                        "  [^.!?]*    # Greedily consume up to punctuation.\n" +
-	                        ")*           # Zero or more (special normal*)\n" +
-	                        "[.!?]?       # Optional ending punctuation.\n" +
-	                        "['\"]?)       # Optional closing quote.\n" +
-	                        "\\s*       # Trailing white space or new line\n",
-	                        Pattern.MULTILINE | Pattern.COMMENTS);
 	        
-	        
-	        //public void map(LongWritable key, WikipediaPage p, OutputCollector<ArrayListOfLongsWritable, PairOfStringInt> output,
-	          //      Reporter reporter) throws IOException {
-	        
-	        public static WikiClean cleaner;
-	        
-	           public void map(IntWritable key, WikipediaPage p, OutputCollector<PairOfInts, PairOfStrings> output,
+	           public void map(IntWritable key, Text p, OutputCollector<PairOfInts, PairOfStrings> output,
 	                    Reporter reporter) throws IOException {
 	               
 	               
-	            if (p.isRedirect()) {
-	                reporter.incrCounter(PageTypes.REDIRECT, 1);
-
-	            } else if (p.isDisambiguation()) {
-	                reporter.incrCounter(PageTypes.DISAMBIGUATION, 1);
-	            } else if (p.isEmpty()) {
-	                reporter.incrCounter(PageTypes.EMPTY, 1);
-	            } else if (p.isArticle()) {
-	                reporter.incrCounter(PageTypes.ARTICLE, 1);
-
-	                if (p.isStub()) {
-	                    reporter.incrCounter(PageTypes.STUB, 1);
-	                }
-	            } else {
-	                reporter.incrCounter(PageTypes.NON_ARTICLE, 1);
-	            }
-	            
-	            if(!p.isArticle() || p.isEmpty()) return;
-	            String raw = p.getRawXML();
-	            String content = cleaner.clean(raw);
-	            //String title = cleaner.getTitle(content);
-	            //System.out.println(lang + " " + key + " TITLE = " + p.getTitle());
-	            if(content == null) return;
-	            if(p.getDocid() == null) return;
-	            String cleancontent = content
-	                    //.replace("\n", " ")
-	                    .replace("  ", " ")
-	                    .replace(",","")
-	                    .replace("(b.", "(b")
-	                    .replace("(d.", "(d");
-	            
-	            String lines[] = cleancontent.split("\n");
+	            String lines[] = p.toString().split("\n");
 	            Matcher m;
 	            PairOfStrings langSentence;
 	            PairOfInts docIdSentenceCt;
 	            int sentencect = 0;
 	            for(String line: lines){
 	                //System.out.println(p.getDocid() + "\n>>>>>>>>CONTENT\n" + line + "\nCONTENT<<<<<<<<<<\n");
-	                m = sentenceregex.matcher(line);
-
-	                // Assume a whole Wikipedia article has been passed to the mapper; track sentence number by counting
-	                try{
-	                    //if(!m.matches()) continue;
-	                    // For each sentence in the input text:
-	                    while(m.find()){
 	                        langSentence = new PairOfStrings();
 	                        docIdSentenceCt = new PairOfInts();
-	                        String sentence = m.group(1);
+	                        String sentence = line;
 	                        langSentence.set(lang, sentence);
 	                        docIdSentenceCt.set(key.get(),sentencect);
 	                        //System.out.println("SENTENCE: " + langSentence.toString());
 	                        output.collect(docIdSentenceCt, langSentence);
 	                        sentencect++;
-	                    }
-	            
-	                }catch(Throwable e){
-	                    System.err.println("WARNING: Possible stack overflow from regex at docid " + p.getDocid());
-	                //System.err.println("WARNING: Possible stack overflow from regex at docid " + p.getDocid() + " and sentence # " + p.toString());
-	                }
 	            }
 	        }
 
@@ -156,13 +84,6 @@ package wikigraph;
 	        
 	        
 	        public void configure(JobConf job) {
-	            
-	            lang = job.get("wiki.language", "en");
-	            WikiLanguage wikilang = WikiLanguage.valueOf(lang.toUpperCase());
-	            cleaner =  new WikiCleanBuilder()
-	                        .withLanguage(wikilang)
-	                        .withTitle(true)
-	                        .withFooter(false).build();
 
 	        }
 	    }
@@ -227,7 +148,7 @@ package wikigraph;
 	        LOG.info(" - e language: " + eLanguage);
 	        LOG.info(" - f language: " + fLanguage);
 
-	        JobConf conf = new JobConf(getConf(), PreprocessWikiInput.class);
+	        JobConf conf = new JobConf(getConf(), BuildGraph.class);
 	        conf.setJobName(String.format("PreprocessWikiInput[%s: %s, %s: %s, %s: %s]", eINPUT, eInputPath, fINPUT, fInputPath, eOUTPUT, eOutputPath,
 	                eLANGUAGE_OPTION, eLanguage, fLANGUAGE_OPTION, fLanguage));
 
@@ -283,11 +204,11 @@ package wikigraph;
 	        return 0;
 	    }
 
-	    public PreprocessWikiInput() {}
+	    public BuildGraph() {}
 
 	    public static void main(String[] args) throws Exception {
-	        ToolRunner.run(new PreprocessWikiInput(), args);
+	        ToolRunner.run(new BuildGraph(), args);
 	    }
 	}
 
-}
+
