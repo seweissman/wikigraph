@@ -3,6 +3,7 @@ package wikigraph;
 
 import java.io.IOException;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -15,6 +16,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -26,11 +28,14 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
+import edu.umd.cloud9.collection.XMLInputFormatOld;
 import edu.umd.cloud9.io.pair.PairOfInts;
+import edu.umd.cloud9.io.pair.PairOfLongs;
 import edu.umd.cloud9.io.pair.PairOfStrings;
 	
 	public class BuildGraph extends Configured implements Tool {
@@ -52,36 +57,61 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	     * 
 	     */
 
+	    
 	    private static class LanguageMapper extends MapReduceBase implements
-	    Mapper<IntWritable, Text, PairOfInts, PairOfStrings> {
-	    //Mapper<LongWritable, WikipediaPage, ArrayListOfLongsWritable, PairOfStringInt> {
+	    Mapper<LongWritable, Text, Text, PairOfStrings> {
 	        
-	        static String lang;
-	        
-	           public void map(IntWritable key, Text p, OutputCollector<PairOfInts, PairOfStrings> output,
+	    	static final Pattern titlePattern = Pattern.compile(".*<title>(.*)<\\/title>.*");
+	    	static final Pattern beginRevisionPattern = Pattern.compile(".*<revision>.*");
+	    	static final Pattern endRevisionPattern = Pattern.compile(".*<\\/revision>.*");
+	    	static final Pattern userNamePattern = Pattern.compile(".*<username>(.*)<\\/username>.*");
+	    	static final Pattern ipPattern = Pattern.compile(".*<ip>(.*)<\\/ip>.*");
+
+	           public void map(LongWritable key, Text p, OutputCollector<Text, PairOfStrings> output,
 	                    Reporter reporter) throws IOException {
 	               
 	               
 	            String lines[] = p.toString().split("\n");
+	            System.out.println("key = " + key);
 	            Matcher m;
-	            PairOfStrings langSentence;
-	            PairOfInts docIdSentenceCt;
-	            int sentencect = 0;
+	            String title = null;
+	            String user = null;
+	            String lastUser = null;
+	            String ip = null;
+	            Text titleOut = null;
+	            PairOfStrings userEdge;
 	            for(String line: lines){
-	                //System.out.println(p.getDocid() + "\n>>>>>>>>CONTENT\n" + line + "\nCONTENT<<<<<<<<<<\n");
-	                        langSentence = new PairOfStrings();
-	                        docIdSentenceCt = new PairOfInts();
-	                        String sentence = line;
-	                        langSentence.set(lang, sentence);
-	                        docIdSentenceCt.set(key.get(),sentencect);
-	                        //System.out.println("SENTENCE: " + langSentence.toString());
-	                        output.collect(docIdSentenceCt, langSentence);
-	                        sentencect++;
+					System.out.println("LINE " + line);
+	            	m = titlePattern.matcher(line);
+	            	if((m = endRevisionPattern.matcher(line)).matches()){
+						System.out.println("\tend revision\n");
+						System.out.println("user = " + ((user != null)?user:"NULL"));
+						System.out.println("lastUser = " + ((lastUser != null)?lastUser:"NULL"));
+						System.out.println("ip = " + ((ip != null)?ip:"NULL"));
+						
+	            		if(lastUser != null	&& titleOut != null && (user != null || ip != null)){
+	            			userEdge = new PairOfStrings();
+	            			if(user != null) userEdge.set(user, lastUser);
+	            			if(ip != null) userEdge.set(ip, lastUser);
+	            			output.collect(titleOut, userEdge);
+						}
+	            		lastUser = user;
+	            		user = null;
+            			ip = null;
+	            	}else if((m = titlePattern.matcher(line)).matches()){
+	            		titleOut = new Text();
+	            		title = m.group(1);
+	            		titleOut.set(title);
+	            		System.out.println("\tTITLE " + title);
+	            	}else if((m = userNamePattern.matcher(line)).matches()){
+	            		user = m.group(1);
+	            		System.out.println("\tUSER " + user);
+	            	}else if((m = ipPattern.matcher(line)).matches()){
+	            		ip = m.group(1);
+	            		System.out.println("\tIP USER " + ip);
+	            	}
 	            }
 	        }
-
-	        
-	        
 	        
 	        public void configure(JobConf job) {
 
@@ -89,29 +119,17 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	    }
 
 	 
-	    private static final String eINPUT = "ewiki";
-	    private static final String fINPUT = "fwiki";
-	    private static final String eOUTPUT = "eout";
-	    private static final String fOUTPUT = "fout";
-	    private static final String eLANGUAGE_OPTION = "elang";
-	    private static final String fLANGUAGE_OPTION = "flang";
-	    
+	    private static final String INPUT = "input";
+	    private static final String OUTPUT = "output";
+	    	    
 	    @SuppressWarnings("static-access")
 	    @Override
 	    public int run(String[] args) throws Exception {
 	        Options options = new Options();
 	        options.addOption(OptionBuilder.withArgName("path")
-	                .hasArg().withDescription("bz2 input path").create(fINPUT));
+	                .hasArg().withDescription("bz2 input path").create(INPUT));
 	        options.addOption(OptionBuilder.withArgName("path")
-	                .hasArg().withDescription("bz2 input path").create(eINPUT));
-	        options.addOption(OptionBuilder.withArgName("path")
-	                .hasArg().withDescription("output path").create(eOUTPUT));
-	        options.addOption(OptionBuilder.withArgName("path")
-	                .hasArg().withDescription("output path").create(fOUTPUT));
-	        options.addOption(OptionBuilder.withArgName("en|sv|de|cs|es|zh|ar|tr").hasArg()
-	                .withDescription("two-letter language code").create(eLANGUAGE_OPTION));
-	        options.addOption(OptionBuilder.withArgName("en|sv|de|cs|es|zh|ar|tr").hasArg()
-	                .withDescription("two-letter language code").create(fLANGUAGE_OPTION));
+	                .hasArg().withDescription("output path").create(OUTPUT));
 	        
 	        CommandLine cmdline;
 	        CommandLineParser parser = new GnuParser();
@@ -122,9 +140,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	            return -1;
 	        }
 
-	        if (!cmdline.hasOption(eINPUT) || !cmdline.hasOption(fINPUT) 
-	                || !cmdline.hasOption(eLANGUAGE_OPTION) || !cmdline.hasOption(fLANGUAGE_OPTION) 
-	                || !cmdline.hasOption(eOUTPUT) || !cmdline.hasOption(fOUTPUT)){
+	        if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT)){ 
 	            HelpFormatter formatter = new HelpFormatter();
 	            formatter.setWidth(120);
 	            formatter.printHelp(this.getClass().getName(), options);
@@ -132,25 +148,19 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	            return -1;
 	        }
 
-	        String eInputPath = cmdline.getOptionValue(eINPUT);
-	        String fInputPath = cmdline.getOptionValue(fINPUT);
-	        String eOutputPath = cmdline.getOptionValue(eOUTPUT);
-	        String fOutputPath = cmdline.getOptionValue(fOUTPUT);
-	        String eLanguage = cmdline.getOptionValue(eLANGUAGE_OPTION);
-	        String fLanguage = cmdline.getOptionValue(fLANGUAGE_OPTION);
+	        String inputPath = cmdline.getOptionValue(INPUT);
+	        String outputPath = cmdline.getOptionValue(OUTPUT);
+
 	        
 
 	        LOG.info("Tool name: " + this.getClass().getName());
-	        LOG.info(" - e input file: " + eInputPath);
-	        LOG.info(" - f input file: " + fInputPath);
-	        LOG.info(" - e output file: " + eOutputPath);
-	        LOG.info(" - f output file: " + fOutputPath);
-	        LOG.info(" - e language: " + eLanguage);
-	        LOG.info(" - f language: " + fLanguage);
+	        LOG.info(" - input file: " + inputPath);
+
+	        LOG.info(" - output file: " + outputPath);
 
 	        JobConf conf = new JobConf(getConf(), BuildGraph.class);
-	        conf.setJobName(String.format("PreprocessWikiInput[%s: %s, %s: %s, %s: %s]", eINPUT, eInputPath, fINPUT, fInputPath, eOUTPUT, eOutputPath,
-	                eLANGUAGE_OPTION, eLanguage, fLANGUAGE_OPTION, fLanguage));
+	        conf.setJobName(String.format("PreprocessWikiInput[%s: %s, %s: %s]", INPUT, inputPath, OUTPUT, outputPath));
+	               
 
 	        conf.setNumMapTasks(4);
 	        conf.setNumReduceTasks(0);
@@ -158,8 +168,8 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	        conf.setMapperClass(LanguageMapper.class);
 	        
 	        //conf.setInputFormat(WikipediaPageInputFormat.class);
-	        conf.setInputFormat(SequenceFileInputFormat.class);
-	        conf.setOutputFormat(SequenceFileOutputFormat.class);
+	        conf.setInputFormat(XMLInputFormatOld.class);
+	        conf.setOutputFormat(TextOutputFormat.class);
 	        //conf.setOutputFormat(TextOutputFormat.class);
 	        
 	        // Set heap space - using old API
@@ -167,39 +177,24 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	        conf.set("mapred.map.child.java.opts", "-Xmx2048m");
 	        conf.set("mapred.job.reduce.memory.mb", "6144");
 	        conf.set("mapred.reduce.child.java.opts", "-Xmx6144m");
+	        conf.set("xmlinput.start","page");
+	        conf.set("xmlinput.end","page");
 	        //conf.set("mapred.child.java.opts", "-Xmx2048m");
 	        
-	        conf.setOutputKeyClass(PairOfInts.class);
+	        conf.setOutputKeyClass(Text.class);
 	        conf.setOutputValueClass(PairOfStrings.class);
 	        
 	        FileSystem fs = FileSystem.get(conf);        
-	        Path ePath = new Path(eOutputPath);
-	        Path fPath = new Path(fOutputPath);
+	        Path outPath = new Path(outputPath);
 	        
 	        // Job 1
-	        FileInputFormat.setInputPaths(conf, new Path(eInputPath));
-	        FileOutputFormat.setOutputPath(conf, ePath);
+	        FileInputFormat.setInputPaths(conf, new Path(inputPath));
+	        FileOutputFormat.setOutputPath(conf, outPath);
 	        
-	        conf.set("wiki.language", eLanguage);
-
 	        // Delete the output directory if it exists already.
-	        fs.delete(ePath, true);
+	        fs.delete(outPath, true);
 
 	        JobClient.runJob(conf);
-
-	        
-	        // Job 2
-
-	        FileInputFormat.setInputPaths(conf, new Path(fInputPath));
-	        FileOutputFormat.setOutputPath(conf, fPath);
-	        
-	        conf.set("wiki.language", fLanguage);
-
-	        // Delete the output directory if it exists already.
-	        fs.delete(fPath, true);
-	        
-	        JobClient.runJob(conf);
-
 	        
 	        return 0;
 	    }
