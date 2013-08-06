@@ -38,8 +38,8 @@ import edu.umd.cloud9.io.pair.PairOfInts;
 import edu.umd.cloud9.io.pair.PairOfLongs;
 import edu.umd.cloud9.io.pair.PairOfStrings;
 	
-	public class BuildGraph extends Configured implements Tool {
-	    private static final Logger LOG = Logger.getLogger(BuildGraph.class);
+	public class BuildUserEditGraph extends Configured implements Tool {
+	    private static final Logger LOG = Logger.getLogger(BuildUserEditGraph.class);
 
 	    /* SignatureeMapper
 	     * 
@@ -70,7 +70,11 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	           public void map(LongWritable key, Text p, OutputCollector<Text, PairOfStrings> output,
 	                    Reporter reporter) throws IOException {
 	               
-	               
+	               // users & articles with weights?
+	        	   // users to users consecutive edits with weights
+	        	   // some sort of user editing diagram
+	        	   // time to next edit
+	        	   // highly protected/controversial articles
 	            String lines[] = p.toString().split("\n");
 	            System.out.println("key = " + key);
 	            Matcher m;
@@ -158,7 +162,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 
 	        LOG.info(" - output file: " + outputPath);
 
-	        JobConf conf = new JobConf(getConf(), BuildGraph.class);
+	        JobConf conf = new JobConf(getConf(), BuildUserEditGraph.class);
 	        conf.setJobName(String.format("PreprocessWikiInput[%s: %s, %s: %s]", INPUT, inputPath, OUTPUT, outputPath));
 	               
 
@@ -199,10 +203,10 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	        return 0;
 	    }
 
-	    public BuildGraph() {}
+	    public BuildUserEditGraph() {}
 
 	    public static void main(String[] args) throws Exception {
-	        ToolRunner.run(new BuildGraph(), args);
+	        ToolRunner.run(new BuildUserEditGraph(), args);
 	    }
 	}
 
