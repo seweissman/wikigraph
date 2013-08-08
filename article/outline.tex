@@ -1,0 +1,92 @@
+\documentclass{article}
+\usepackage{url}
+\usepackage{algpseudocode}
+\usepackage{verbatim}
+\usepackage{microtype}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{epsfig}
+\usepackage{algorithmicx}
+\usepackage{algorithm}
+\usepackage{authblk}
+
+\begin{document}
+
+\title{Finding Bots and Spammers on Wikipedia}
+
+
+\author[1]{Sarah Weissman (sew@umd.edu)}
+\affil[1]{University of Maryland, College of Information Studies}
+
+\date{August 16, 2013}
+
+\maketitle
+\begin{abstract}
+\end{abstract}
+
+\section{Introduction}
+
+Wikipedia is an open-source collaboratively edited encyclopedia. It is viewable and editable by anyone, with editing changes viewable immediately. Although Wikipedia is not a social network, Collaborative editing on Wikipedia has its social aspects. Although it is possible to edit Wikipedia anonymously, or to merely view Wikipedia without editing at all, many Wikipedia editors create user accounts. User accounts have associated User pages. Although these pages are not profiles (link to Wikipedia policy), they are spaces in which user-to-user communication takes place and serve as a scratch space where users can work on drafts of articles. Many editors organize themselves around communities (projects?) focused on editing or expanding Wikipedia content on specific topics or on other Wikipedia adminstistrative editing tasks. (Examples of communities?)
+
+In this paper we use techniques from social network analysis to attempt to identify certain types of user behaviour on Wikipedia. Specifically we are interested in identifying bots and spammers. Although the behaviour of bots and spammers might be considered anti-social, rather than social, the ability to identify them can benefit social nework analysis of Wikipedia in several ways. Filtering out such users can give a more balanced view of the network of Wikipedia editors. Although bots are allowed on Wikipedia and serve an important purpose, since they have the potential to make many more edits to many more articles in a short period of time than a human user, their behavior can make their editing contributions look more significant than it actually is to a network. Spammers are useful to detect, since their behavior is undesirable and if detected could be automatically stopped. Spammers may also clutter up the network by editing anonymously and unpredictably.
+
+Define spammers and bots more precisely.
+
+Techniques for big data processing make it easier to get a big picture of the Wikipedia network of editors. We take advantage of the MapReduce to process user data.
+
+\section{Related Work}
+%    Related work - a literature review of papers on similar topics
+\subsection{Profiling user behaviour}
+What variables/techniques used.
+\subsection{Wikipedia network analysis}
+Scope of earlier work.
+
+\section{Research questions and setup}
+%    Research questions and setup - are you doing an experiment? Running a survey? Doing an analysis? Lay that all out here.
+
+\subsection{The overall picture}
+\subsubsection{The structure of Wikipedia data} Data for English Wikipedia taken from \url{dumps.wikimedia.org} for 07/26/2013. Namespaces available? How big is this data? What is the XML structure? What fields are available.
+\subsubsection{The overall picture of the data} Number of articles, number of users, number of edits. Average edits, average length of account (from first edit to most recent). Size of edits. Time since last edit and time to next edit.
+
+\subsection{Processing and sampling Wikipedia with MapReduce}
+\begin{itemize}
+\item Sampling. How to do this? Thinking probably by article.
+\item 
+\end{itemize}
+
+\subsection{Profiling user behavior}
+\begin{itemize}
+\item Number of edits and number of article edits. Hypotheses about how these relate to bot/spam behavior.
+\item Time from last edit and time to next edit. Hypotheses about how these relate to bot/spam behavior.
+\item How to choose users to look at? How to measure whether a user is a spammer or not.
+\item Are there other interesting user behaviours that fall out of user profile?
+\end{itemize}
+
+\subsection{The network graph}
+\begin{itemize}
+\item Co-edit graph. Nodes are uers. A direct edge from user A to user B if B edits the article directly after A. (Convention from earlier work on Wikipedia editing.)
+\item User - article graph. Nodes are articles and users. An (undirected) edge from User A to Article X if A edits X.
+\item Clustering/centrality measures? (I have a PageRank implementation.)
+\end{itemize}
+
+\subsection{Technology}
+Using Gephi to visualize. Might make sense to program some sort of centrality measures (e.g. degree centrality) outside of Gephi because they will scale better.
+
+\section{Results}
+% Results - here, you report exactly what you found, but with no interpretation
+\subsection{User profiling}
+\subsection{Edit network Visualization}
+
+\section{Discussion}
+\subsection{Success?}
+Were the hypotheses validated? Manually inspect users to see if they actually correspond to spammers and bots.
+%    Discussion - interpret the results and make generalizations and broader lessons
+\subsection{Limitations}
+What were some of the limitations? What are the opportunities for future work?
+\begin{itemize}
+\item With more time there would be more opportunities to validate results better, form better hypotheses using manual analysis.
+\end{itemize}
+\section{Conclusions}
+\section{Reference}
+Figure out this bibtex thing.
+\end{document}
