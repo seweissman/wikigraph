@@ -199,17 +199,30 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	            
 	            lastTime = 0;
 	            long time = 0;
+	            int bytesdiff;
+	            int lastBytes = 0;
+	            int nbytes;
 	            for(long t : revisionMap.keySet()){
 	            	PairOfStringLong userDate = new PairOfStringLong();
 	            	RevisionRecord r = revisionMap.get(t);
 	            	time = r.getTime();
+	            	nbytes = r.getLength();
+	            	bytesdiff = nbytes - lastBytes;
 	            	long timediff = time - lastTime;
 	            	String name = r.getUsername();
 	            	r.setTimeToNextEdit(timediff);
+	            	if(bytesdiff < 0){
+	            		r.setBytesAdded(0);
+	            		r.setBytesRemoved(-1*bytesdiff);
+	            	}else{
+	            		r.setBytesRemoved(0);
+	            		r.setBytesAdded(bytesdiff);
+	            	}
 	            	userDate.set(name, time);
 	            	//System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
 	            	context.write(userDate, r);
 	            	lastTime = time;
+	            	lastBytes = nbytes;
 	            }
 	            
 	        }
@@ -253,10 +266,13 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 			public static TreeMap<Integer,Long> nscounts = new TreeMap<Integer,Long>();
 			public static long narticles = 0;
 			public static long nedits = 0;
+			public static long addedits = 0;
+			public static long removeedits = 0;
 			public static String lastuser = null;
 			HashSet<String> articleSet = new HashSet<String>();
 			public static long sumTime = 0;
-			public static long sumBytes = 0;
+			public static long sumAddBytes = 0;
+			public static long sumRemoveBytes = 0;
 			
 			@Override
 			public void reduce(PairOfStringLong key, Iterable<RevisionRecord> records, Context context)
@@ -284,7 +300,10 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 						profile.setEditMap(dayedits);
 						profile.setArticleMap(dayarticles);
 						profile.setTimeToNextEdit(sumTime);
-						profile.setEditBytes(sumBytes);
+						profile.setBytesAdded(sumAddBytes);
+						profile.setBytesRemoved(sumRemoveBytes);
+						profile.setNAddEdits(addedits);
+						profile.setNAddEdits(removeedits);
 						profile.setNamespaceMap(nscounts);
 					//	System.out.println("output = " + userOut + "," + profile);
 						context.write(userOut, profile);
@@ -295,7 +314,10 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					nedits = 0;
 					narticles = 0;
 					sumTime = 0;
-					sumBytes = 0;
+					sumAddBytes = 0;
+					sumRemoveBytes = 0;
+					addedits = 0;
+					removeedits = 0;
 				}
 				
 				articleSet.clear();
@@ -309,7 +331,11 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					//System.out.println("Record = " + r);
 					articleSet.add(r.getArticle());
 					sumTime += r.getTimeToNextEdit();
-					sumBytes += r.getLength();
+					sumAddBytes += r.getBytesAdded();
+					sumRemoveBytes += r.getBytesRemoved();
+					if(r.getBytesAdded() > 0) addedits++;
+					if(r.getBytesRemoved() > 0) removeedits++;
+					if(r.getBytesAdded() == 0 && r.getBytesRemoved() == 0) addedits++;
 					dayct++;
 				}
 				dayarticles.put(day, (long) articleSet.size());
@@ -335,7 +361,10 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					profile.setArticleMap(dayarticles);
 					profile.setNamespaceMap(nscounts);
 					profile.setTimeToNextEdit(sumTime);
-					profile.setEditBytes(sumBytes);
+					profile.setNAddEdits(addedits);
+					profile.setNRemoveEdits(removeedits);
+					profile.setBytesAdded(sumAddBytes);
+					profile.setBytesRemoved(sumRemoveBytes);
 					context.write(userOut, profile);
 				}
 			}

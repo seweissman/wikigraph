@@ -58,7 +58,10 @@ public class UserProfile implements Writable {
 	//private float meanTimeToNextEdit;
 	private long timeToNextEdit;
 	//private float meanEditBytes;
-	private long editBytes;
+	private long bytesAdded;
+	private long bytesRemoved;
+	private long nAddEdits;
+	private long nRemoveEdits;
 
 	private TreeMap<Long,Long> dayedits;
 	private TreeMap<Long,Long> dayarticles;
@@ -66,11 +69,10 @@ public class UserProfile implements Writable {
 	
   public UserProfile() {}
 
-  public UserProfile(long nedits, long narticles, long time, long bytes){
+  public UserProfile(long nedits, long narticles, long time){
 		this.nedits = nedits;
 		this.narticles = narticles;
 		this.timeToNextEdit = time;
-		this.editBytes = bytes;
 		//dayedits = new TreeMap<Long,Long>();
 		//dayarticles = new TreeMap<Long,Long>();
 	}
@@ -83,9 +85,12 @@ public class UserProfile implements Writable {
 	@Override
 	public void readFields(DataInput in) throws IOException {
 	  	nedits = in.readLong();
+	  	nAddEdits = in.readLong();
+	  	nRemoveEdits = in.readLong();
 		narticles = in.readLong();
 		timeToNextEdit = in.readLong();
-		editBytes = in.readLong();
+		bytesAdded = in.readLong();
+		bytesRemoved = in.readLong();
 		
 		dayedits = new TreeMap<Long,Long>();
 		dayarticles = new TreeMap<Long,Long>();
@@ -129,9 +134,12 @@ public class UserProfile implements Writable {
 	@Override
 	public void write(DataOutput out) throws IOException {
 		out.writeLong(nedits);
+		out.writeLong(nAddEdits);
+		out.writeLong(nRemoveEdits);
 		out.writeLong(narticles);
 		out.writeLong(timeToNextEdit);
-		out.writeLong(editBytes);
+		out.writeLong(bytesAdded);
+		out.writeLong(bytesRemoved);
 		
 		out.writeInt(dayedits.keySet().size());
 		for(long key : dayedits.keySet()){
@@ -180,8 +188,14 @@ public class UserProfile implements Writable {
 	  sb.append(",");
 	  sb.append(timeToNextEdit);
 	  sb.append(",");
-	  sb.append(editBytes);
-	  sb.append("]");
+	  sb.append(bytesAdded);
+	  sb.append(",");
+	  sb.append(nAddEdits);
+	  sb.append(",");
+	  sb.append(bytesRemoved);
+	  sb.append(",");
+	  sb.append(nRemoveEdits);
+	  	  sb.append("]");
 	  return sb.toString();
     }
      
@@ -274,11 +288,35 @@ public void setTimeToNextEdit(long timeToNextEdit) {
 }
 
 
-public long getEditBytes() {
-	return editBytes;
+public long getBytesAdded() {
+	return bytesAdded;
 }
 
-public void setEditBytes(long editBytes) {
-	this.editBytes = editBytes;
+public void setBytesAdded(long bytesAdded) {
+	this.bytesAdded = bytesAdded;
+}
+
+public long getBytesRemoved() {
+	return bytesRemoved;
+}
+
+public void setBytesRemoved(long bytesRemoved) {
+	this.bytesRemoved = bytesRemoved;
+}
+
+public long getNRemoveEdits() {
+	return nRemoveEdits;
+}
+
+public void setNRemoveEdits(long nRemoveEdits) {
+	this.nRemoveEdits = nRemoveEdits;
+}
+
+public long getNAddEdits() {
+	return nAddEdits;
+}
+
+public void setNAddEdits(long nAddEdits) {
+	this.nAddEdits = nAddEdits;
 }
 }

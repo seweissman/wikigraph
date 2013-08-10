@@ -52,6 +52,8 @@ public class RevisionRecord implements Writable {
 	//private String username;
 	private String article;
 	private int length;
+	private int bytesAdded;
+	private int bytesRemoved;
 	private String username;
 
 
@@ -201,5 +203,17 @@ public String getUsername() {
 }
 public void setUsername(String username) {
 	this.username = username;
+}
+public int getBytesAdded() {
+	return bytesAdded;
+}
+public void setBytesAdded(int bytesAdded) {
+	this.bytesAdded = bytesAdded;
+}
+public int getBytesRemoved() {
+	return bytesRemoved;
+}
+public void setBytesRemoved(int bytesRemoved) {
+	this.bytesRemoved = bytesRemoved;
 }
 }
