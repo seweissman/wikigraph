@@ -29,6 +29,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -43,6 +44,29 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 
  
 	    
+	    private static class EditGraphCombiner extends Reducer<PairOfStrings, IntWritable, PairOfStrings, IntWritable> {
+			
+			@Override
+			public void reduce(PairOfStrings edge, Iterable<IntWritable> counts, Context context)
+			       throws IOException, InterruptedException {
+				//System.out.println("key = " + key);
+				int total = 0;
+
+				Iterator<IntWritable> countIt = counts.iterator();
+				while(countIt.hasNext()){
+					IntWritable c = countIt.next();
+					total += c.get();
+				}
+
+				IntWritable countOut = new IntWritable();
+				countOut.set(total);
+				context.write(edge, countOut);
+				
+			}
+			
+
+	    }
+
 	    private static class EditGraphReducer extends Reducer<PairOfStrings, IntWritable, PairOfStrings, IntWritable> {
 			
 			@Override
@@ -128,11 +152,11 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 
 	       // job.setMapperClass(EditGraphMapper.class);
 	        job.setReducerClass(EditGraphReducer.class);
-	        job.setCombinerClass(EditGraphReducer.class);
+	        job.setCombinerClass(EditGraphCombiner.class);
 	        //job.setPartitionerClass(UserPartitioner.class);
 	        
 	        //conf.setInputFormat(WikipediaPageInputFormat.class);
-	        job.setInputFormatClass(XMLInputFormat.class);
+	        job.setInputFormatClass(SequenceFileInputFormat.class);
 	        job.setOutputFormatClass(SequenceFileOutputFormat.class);
 	        //conf.setOutputFormat(TextOutputFormat.class);
 	        

@@ -187,6 +187,8 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
     }
 
 	    
+	    
+	    
 	    private static class EditGraphReducer extends Reducer<PairOfStrings, IntWritable, PairOfStrings, IntWritable> {
 			
 			@Override
@@ -201,11 +203,9 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 					total += c.get();
 				}
 
-				if(total > 1){
-					IntWritable countOut = new IntWritable();
-					countOut.set(total);
-					context.write(edge, countOut);
-				}
+				IntWritable countOut = new IntWritable();
+				countOut.set(total);
+				context.write(edge, countOut);
 				
 			}
 			
