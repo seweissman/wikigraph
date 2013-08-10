@@ -2,10 +2,10 @@ package wikigraph;
 
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,26 +16,26 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.TextOutputFormat;
+
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import edu.umd.cloud9.collection.XMLInputFormatOld;
+import edu.umd.cloud9.collection.XMLInputFormat;
+import edu.umd.cloud9.io.pair.PairOfStringLong;
 	
 	public class BuildUserProfile extends Configured implements Tool {
 	    private static final Logger LOG = Logger.getLogger(BuildUserProfile.class);
@@ -89,9 +89,8 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 
 		 */
 	    
-	    
-	    private static class RevisionMapper extends MapReduceBase implements
-	    Mapper<LongWritable, Text, Text, RevisionRecord> {
+	    private static class RevisionMapper extends Mapper<LongWritable, Text, PairOfStringLong, RevisionRecord> {
+
 	    	 /*
 	        <revision>
 	        <id>4407235</id>
@@ -109,6 +108,9 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 	        <format>text/x-wiki</format>
 	      </revision>
 	    */
+	    	private static String wikistart = "2001-01-01T00:00:00Z";
+	    	private static long wikistartmillis = javax.xml.bind.DatatypeConverter.parseDateTime(wikistart).getTimeInMillis();
+	    	private static long millisinday = 86400000;
 	    	static final Pattern titlePattern = Pattern.compile(".*<title>(.*)<\\/title>.*");
 	    	static final Pattern beginRevisionPattern = Pattern.compile(".*<revision>.*");
 	    	static final Pattern endRevisionPattern = Pattern.compile(".*<\\/revision>.*");
@@ -117,8 +119,11 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 	    	static final Pattern nsPattern = Pattern.compile(".*<ns>(.*)<\\/ns>.*");
 	    	static final Pattern timestampPattern = Pattern.compile(".*<timestamp>(.*)<\\/timestamp>.*");
 	    	static final Pattern bytesPattern = Pattern.compile(".*<text id=\"(.*)\" bytes=\"(.*)\" \\/>.*");
-	           public void map(LongWritable key, Text p, OutputCollector<Text, RevisionRecord> output,
-	                    Reporter reporter) throws IOException {
+	    	
+	    	static TreeMap<Long,RevisionRecord> revisionMap = new TreeMap<Long,RevisionRecord>();
+	    	
+	        public void map(LongWritable key, Text p, Context context)
+	                throws IOException, InterruptedException {
 	               
 	               // users & articles with weights?
 	        	   // users to users consecutive edits with weights
@@ -126,6 +131,7 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 	        	   // time to next edit
 	        	   // highly protected/controversial articles
 	            String lines[] = p.toString().split("\n");
+	            revisionMap.clear();
 	            //System.out.println("key = " + key);
 	            Matcher m;
 	            String title = null;
@@ -134,7 +140,8 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 	            String ns = null;
 	            String timestamp = null;
 	            String bytes = null;
-	            Text userOut = null;
+	            long lastTime = 0;
+	            //Text userOut = null;
 	            for(String line: lines){
 					//System.out.println("LINE " + line);
 	            	m = titlePattern.matcher(line);
@@ -147,16 +154,24 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 
 	            		if(title != null && (user != null || ip != null)
 	            				&& ns != null && timestamp != null && bytes != null){
-		            		Text name = new Text();
+		            		String name;
 	            			if(user == null){
-	            				name.set(ip);
+	            				name = ip;
 	            			}else{
-	            				name.set(user);
+	            				name = user;
 	            			}
-	            			userOut = new Text();
-	            			userOut.set(name);
-	            			RevisionRecord r = new RevisionRecord(Integer.parseInt(ns),parseTime(timestamp),title,Integer.parseInt(bytes));
-	            			output.collect(userOut, r);
+	            			//userOut = new Text();
+	            			//userOut.set(name);
+	            			long time = parseTime(timestamp);
+	            			
+	            			RevisionRecord r = new RevisionRecord(Integer.parseInt(ns),time,0,title,Integer.parseInt(bytes));
+	            			r.setUsername(name);
+	            			//System.out.println("user = " + name);
+	            			//System.out.println("last time = " + lastTime);
+	            			//output.collect(userOut, r);
+	            			revisionMap.put(time, r);
+	            			
+	            			
 						}
 	            		bytes = null;
 	            		user = null;
@@ -182,45 +197,152 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 	            		//System.out.println("\tBYTES " + bytes);
 	            	}
 	            }
+	            
+	            lastTime = 0;
+	            long time = 0;
+	            for(long t : revisionMap.keySet()){
+	            	PairOfStringLong userDate = new PairOfStringLong();
+	            	RevisionRecord r = revisionMap.get(t);
+	            	time = r.getTime();
+	            	long timediff = time - lastTime;
+	            	String name = r.getUsername();
+	            	r.setTimeToNextEdit(timediff);
+	            	userDate.set(name, time);
+	            	//System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
+	            	context.write(userDate, r);
+	            	lastTime = time;
+	            }
+	            
 	        }
 	        
-	        public void configure(JobConf job) {
-
-	        }
+		    
+		    //<timestamp>2004-02-25T18:55:21Z</timestamp>
+		    //yyyy-MM-dd'T'HH:mm:ssz
+	       public static long parseTime(String timestr) {
+	          
+	          Calendar calendar = javax.xml.bind.DatatypeConverter.parseDateTime(timestr);
+	          long time = (calendar.getTimeInMillis() - wikistartmillis)/millisinday;
+			  return time;
+	          /*
+			  Date t; 
+	          try {
+				t = ft.parse(timestr);
+				return t.getTime();
+			  } catch (java.text.ParseException e) {
+					// TODO Auto-generated catch block
+				e.printStackTrace();
+				return 0;
+			  }	
+			  */ 
+		       
+	       }
 	    }
 
 	    
-	    private static class RevisionReducer extends MapReduceBase implements
-	    Reducer<Text, RevisionRecord, Text, UserProfile> {
+	    private static class UserPartitioner extends Partitioner<PairOfStringLong,RevisionRecord>{
 
 			@Override
-			public void reduce(Text key, Iterator<RevisionRecord> records,	OutputCollector<Text, UserProfile> profiles, Reporter arg3)
-					throws IOException {
-
-				
+			public int getPartition(PairOfStringLong key, RevisionRecord val,int nReducers) {
+				return (key.getLeftElement().hashCode() & Integer.MAX_VALUE)%nReducers;
 			}
 	    	
 	    }
 	    
-	    //<timestamp>2004-02-25T18:55:21Z</timestamp>
-	    //yyyy-MM-dd'T'HH:mm:ssz
-       public static long parseTime(String timestr) {
-          
-          Calendar calendar = javax.xml.bind.DatatypeConverter.parseDateTime(timestr);
-		  return calendar.getTimeInMillis();
-          /*
-		  Date t; 
-          try {
-			t = ft.parse(timestr);
-			return t.getTime();
-		  } catch (java.text.ParseException e) {
-				// TODO Auto-generated catch block
-			e.printStackTrace();
-			return 0;
-		  }	
-		  */ 
-	       
-       }
+	    private static class RevisionReducer extends Reducer<PairOfStringLong, RevisionRecord, Text, UserProfile> {
+			public static TreeMap<Long,Long> dayedits = new TreeMap<Long,Long>();
+			public static TreeMap<Long,Long> dayarticles = new TreeMap<Long,Long>();
+			public static TreeMap<Integer,Long> nscounts = new TreeMap<Integer,Long>();
+			public static long narticles = 0;
+			public static long nedits = 0;
+			public static String lastuser = null;
+			HashSet<String> articleSet = new HashSet<String>();
+			public static long sumTime = 0;
+			public static long sumBytes = 0;
+			
+			@Override
+			public void reduce(PairOfStringLong key, Iterable<RevisionRecord> records, Context context)
+			       throws IOException, InterruptedException {
+				//System.out.println("key = " + key);
+				long day = key.getRightElement();
+				String user = key.getLeftElement();
+				UserProfile profile;
+				Text userOut;
+				
+				if(lastuser == null){
+					lastuser = user;
+				}
+				
+				if(!user.equals(lastuser)){
+					// Only output if user has made more than one edit over more than one day
+					// Should count number of users that don't meet this criteria
+					long span = dayedits.lastKey() - dayedits.firstKey();
+					if(nedits > 1 && span > 1){
+						userOut = new Text();
+						profile = new UserProfile();
+						userOut.set(lastuser);
+						profile.setNArticles(narticles);
+						profile.setNEdits(nedits);
+						profile.setEditMap(dayedits);
+						profile.setArticleMap(dayarticles);
+						profile.setMeanTimeToNextEdit(sumTime/nedits);
+						profile.setMeanEditBytes(sumBytes/nedits);
+						profile.setNamespaceMap(nscounts);
+					//	System.out.println("output = " + userOut + "," + profile);
+						context.write(userOut, profile);
+					}
+					dayedits = new TreeMap<Long,Long>();
+					dayarticles = new TreeMap<Long,Long>();
+					nscounts = new TreeMap<Integer,Long>();
+					nedits = 0;
+					narticles = 0;
+					sumTime = 0;
+					sumBytes = 0;
+				}
+				
+				articleSet.clear();
+				Iterator<RevisionRecord> recordsIt = records.iterator();
+				long dayct = 0;
+				while(recordsIt.hasNext()){
+					RevisionRecord r = recordsIt.next();
+					int ns = r.getNamespace();
+					if(!nscounts.containsKey(ns)) nscounts.put(ns, 0l);
+					nscounts.put(ns, nscounts.get(ns) + 1);
+					//System.out.println("Record = " + r);
+					articleSet.add(r.getArticle());
+					sumTime += r.getTimeToNextEdit();
+					sumBytes += r.getLength();
+					dayct++;
+				}
+				dayarticles.put(day, (long) articleSet.size());
+				dayedits.put(day, dayct);
+				nedits += dayct;
+				narticles += articleSet.size();
+				lastuser = user;
+				
+			}
+			
+			@Override
+			public void cleanup(Context context) throws IOException, InterruptedException{
+				if(narticles != 0 || nedits != 0){
+					UserProfile profile;
+					Text userOut;
+					
+					userOut = new Text();
+					profile = new UserProfile();
+					userOut.set(lastuser);
+					profile.setNArticles(narticles);
+					profile.setNEdits(nedits);
+					profile.setEditMap(dayedits);
+					profile.setArticleMap(dayarticles);
+					profile.setNamespaceMap(nscounts);
+					profile.setMeanTimeToNextEdit(sumTime/nedits);
+					profile.setMeanEditBytes(sumBytes/nedits);
+					context.write(userOut, profile);
+				}
+			}
+	    	
+	    }
+
 
 	 
 	    private static final String INPUT = "input";
@@ -259,23 +381,9 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 
 	        LOG.info("Tool name: " + this.getClass().getName());
 	        LOG.info(" - input file: " + inputPath);
-
 	        LOG.info(" - output file: " + outputPath);
 
-	        JobConf conf = new JobConf(getConf(), BuildUserProfile.class);
-	        conf.setJobName(String.format("PreprocessWikiInput[%s: %s, %s: %s]", INPUT, inputPath, OUTPUT, outputPath));
-	               
-
-	        conf.setNumMapTasks(4);
-	        conf.setNumReduceTasks(20);
-
-	        conf.setMapperClass(RevisionMapper.class);
-	        
-	        //conf.setInputFormat(WikipediaPageInputFormat.class);
-	        conf.setInputFormat(XMLInputFormatOld.class);
-	        conf.setOutputFormat(TextOutputFormat.class);
-	        //conf.setOutputFormat(TextOutputFormat.class);
-	        
+	        Configuration conf = getConf();
 	        // Set heap space - using old API
 	        conf.set("mapred.job.map.memory.mb", "2048");
 	        conf.set("mapred.map.child.java.opts", "-Xmx2048m");
@@ -284,21 +392,42 @@ import edu.umd.cloud9.collection.XMLInputFormatOld;
 	        conf.set("xmlinput.start","page");
 	        conf.set("xmlinput.end","page");
 	        //conf.set("mapred.child.java.opts", "-Xmx2048m");
+
+	        Job job = Job.getInstance(conf);
+	        //JobConf conf = new JobConf(getConf(), BuildUserProfile.class);
+	        job.setJobName(String.format("BuildUserProfile[%s: %s, %s: %s]", INPUT, inputPath, OUTPUT, outputPath));
+	               
+
+	        job.setNumReduceTasks(20);
+
+	        job.setMapperClass(RevisionMapper.class);
+	        job.setReducerClass(RevisionReducer.class);
+	        job.setPartitionerClass(UserPartitioner.class);
 	        
-	        conf.setOutputKeyClass(Text.class);
-	        conf.setOutputValueClass(RevisionRecord.class);
+	        //conf.setInputFormat(WikipediaPageInputFormat.class);
+	        job.setInputFormatClass(XMLInputFormat.class);
+	        job.setOutputFormatClass(SequenceFileOutputFormat.class);
+	        //conf.setOutputFormat(TextOutputFormat.class);
+	        
+	        
+	        job.setMapOutputKeyClass(PairOfStringLong.class);
+	        job.setMapOutputValueClass(RevisionRecord.class);
+	        
+	        job.setOutputKeyClass(Text.class);
+	        job.setOutputValueClass(UserProfile.class);
 	        
 	        FileSystem fs = FileSystem.get(conf);        
 	        Path outPath = new Path(outputPath);
 	        
-	        // Job 1
-	        FileInputFormat.setInputPaths(conf, new Path(inputPath));
-	        FileOutputFormat.setOutputPath(conf, outPath);
+	        FileInputFormat.setInputPaths(job, new Path(inputPath));
+	        FileOutputFormat.setOutputPath(job, outPath);
 	        
 	        // Delete the output directory if it exists already.
 	        fs.delete(outPath, true);
 
-	        JobClient.runJob(conf);
+	        long startTime = System.currentTimeMillis();
+	        job.waitForCompletion(true);
+	        LOG.info("Total Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 	        
 	        return 0;
 	    }

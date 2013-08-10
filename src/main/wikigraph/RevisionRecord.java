@@ -48,13 +48,15 @@ public class RevisionRecord implements Writable {
 */
   private int namespace;
 	private long time;
+	private long timeToNextEdit;
 	//private String username;
 	private String article;
 	private int length;
+	private String username;
 
 
   public RevisionRecord() {}
-	public RevisionRecord(int ns, long time, String article, int l){
+	public RevisionRecord(int ns, long time, long timeToNextEdit, String article, int l){
 		namespace = ns;
 		this.time = time;
 		this.article = article;
@@ -73,6 +75,7 @@ public class RevisionRecord implements Writable {
 	  	length = in.readInt();
 	  	//username = in.readUTF();
 	  	time = in.readLong();
+	  	timeToNextEdit = in.readLong();
 	}
 
 	/**
@@ -87,6 +90,7 @@ public class RevisionRecord implements Writable {
 		out.writeInt(length);
 		//out.writeUTF(username);
 		out.writeLong(time);
+		out.writeLong(timeToNextEdit);
 
 	}
 
@@ -98,6 +102,7 @@ public class RevisionRecord implements Writable {
 	  sb.append(namespace + ",");
 	  sb.append(article + ",");
 	  sb.append(time + ",");
+	  sb.append(timeToNextEdit + ",");
 	  sb.append(length + "]");
 	  return sb.toString();
     }
@@ -175,19 +180,6 @@ public void setTime(long time) {
 	this.time = time;
 }
 
-/*
-
-public String getUsername() {
-	return username;
-}
-
-
-
-public void setUsername(String username) {
-	this.username = username;
-}
-*/
-
 
 public String getArticle() {
 	return article;
@@ -197,5 +189,17 @@ public String getArticle() {
 
 public void setArticle(String article) {
 	this.article = article;
+}
+public long getTimeToNextEdit() {
+	return timeToNextEdit;
+}
+public void setTimeToNextEdit(long timeToNextEdit) {
+	this.timeToNextEdit = timeToNextEdit;
+}
+public String getUsername() {
+	return username;
+}
+public void setUsername(String username) {
+	this.username = username;
 }
 }

@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.TreeMap;
 
 import org.apache.hadoop.io.Writable;
 
@@ -31,7 +32,10 @@ import org.apache.hadoop.io.Writable;
  * 
  */
 public class UserProfile implements Writable {
- /*
+	//Number of edits and number of article edits. Hypotheses about how these relate to bot/spam behavior.
+	//Time from last edit and time to next edit.	
+	
+	/*
     <revision>
     <id>4407235</id>
     <parentid>2527990</parentid>
@@ -48,19 +52,25 @@ public class UserProfile implements Writable {
     <format>text/x-wiki</format>
   </revision>
 */
-  private int namespace;
-	private long time;
-	//private String username;
-	private String article;
-	private int length;
 
+	private long nedits;
+	private long narticles;
+	private float meanTimeToNextEdit;
+	private float meanEditBytes;
 
+	private TreeMap<Long,Long> dayedits;
+	private TreeMap<Long,Long> dayarticles;
+	private TreeMap<Integer,Long> namespacecounts;
+	
   public UserProfile() {}
-	public UserProfile(int ns, long time, String article, int l){
-		namespace = ns;
-		this.time = time;
-		this.article = article;
-		length = l;
+
+  public UserProfile(long nedits, long narticles, float meanTime, float meanBytes){
+		this.nedits = nedits;
+		this.narticles = narticles;
+		this.meanTimeToNextEdit = meanTime;
+		this.meanEditBytes = meanBytes;
+		//dayedits = new TreeMap<Long,Long>();
+		//dayarticles = new TreeMap<Long,Long>();
 	}
 
   
@@ -70,11 +80,43 @@ public class UserProfile implements Writable {
 	 */
 	@Override
 	public void readFields(DataInput in) throws IOException {
-	  	namespace = in.readInt();
-		article = in.readUTF();
-	  	length = in.readInt();
-	  	//username = in.readUTF();
-	  	time = in.readLong();
+	  	nedits = in.readLong();
+		narticles = in.readLong();
+		meanTimeToNextEdit = in.readFloat();
+		meanEditBytes = in.readFloat();
+		
+		dayedits = new TreeMap<Long,Long>();
+		dayarticles = new TreeMap<Long,Long>();
+	  	namespacecounts = new TreeMap<Integer,Long>();
+
+	  	int i=0;
+	  	long key;
+	  	long val;
+	  	int nkeys = in.readInt();
+	  	while(i<nkeys){
+	  		key = in.readLong();
+	  		val = in.readLong();
+	  		dayedits.put(key, val);
+	  		i++;
+	  	}
+	  	i=0;
+	  	nkeys = in.readInt();
+	  	while(i<nkeys){
+	  		key = in.readLong();
+	  		val = in.readLong();
+	  		dayarticles.put(key, val);
+	  		i++;
+	  	}
+	  	i=0;
+	  	nkeys = in.readInt();
+	  	int key2;
+	  	while(i<nkeys){
+	  		key2 = in.readInt();
+	  		val = in.readLong();
+	  		namespacecounts.put(key2, val);
+	  		i++;
+	  	}
+
 	}
 
 	/**
@@ -84,23 +126,60 @@ public class UserProfile implements Writable {
 	 */
 	@Override
 	public void write(DataOutput out) throws IOException {
-		out.writeInt(namespace);
-		out.writeUTF(article);
-		out.writeInt(length);
-		//out.writeUTF(username);
-		out.writeLong(time);
+		out.writeLong(nedits);
+		out.writeLong(narticles);
+		out.writeFloat(meanTimeToNextEdit);
+		out.writeFloat(meanEditBytes);
+		
+		out.writeInt(dayedits.keySet().size());
+		for(long key : dayedits.keySet()){
+			out.writeLong(key);
+			out.writeLong(dayedits.get(key));
+		}
+		out.writeInt(dayarticles.keySet().size());
+		for(long key : dayarticles.keySet()){
+			out.writeLong(key);
+			out.writeLong(dayarticles.get(key));
+		}
+		out.writeInt(namespacecounts.keySet().size());
+		for(int key : namespacecounts.keySet()){
+			out.writeInt(key);
+			out.writeLong(namespacecounts.get(key));
+		}
 
 	}
 
 	@Override
 	public String toString() {
 	  StringBuilder sb = new StringBuilder();
-	  //sb.append("Revision Record [");
 	  sb.append("[");
-	  sb.append(namespace + ",");
-	  sb.append(article + ",");
-	  sb.append(time + ",");
-	  sb.append(length + "]");
+	  sb.append(nedits + ",");
+	  sb.append(narticles + ",");
+	  sb.append("[");
+	  for(long key : dayedits.keySet()){
+		 if(key != dayarticles.firstKey()) sb.append(",");
+	  	 sb.append("{" + key + "," + dayedits.get(key) + "}");
+	  }
+	  sb.append("],");
+	  sb.append("[");
+	  for(long key : dayarticles.keySet()){
+		if(key != dayarticles.firstKey()) sb.append(",");
+	  	sb.append("{" + key + "," + dayarticles.get(key) + "}");
+	  }
+	  sb.append("],");
+	  sb.append("[");
+	  for(int key : namespacecounts.keySet()){
+		if(key != namespacecounts.firstKey()) sb.append(",");
+	  	sb.append("{" + key + "," + namespacecounts.get(key) + "}");
+	  }
+	  sb.append("],");
+	  long activespan = dayedits.lastKey() - dayedits.firstKey();
+	  sb.append(activespan);
+	  sb.append(",");
+	  sb.append(meanTimeToNextEdit);
+	  sb.append(",");
+	  sb.append(meanEditBytes);
+	  sb.append("]");
 	  return sb.toString();
     }
      
@@ -126,8 +205,8 @@ public class UserProfile implements Writable {
    * @return newly-created object
    * @throws IOException
    */
-  public static RevisionRecord create(DataInput in) throws IOException {
-    RevisionRecord m = new RevisionRecord();
+  public static UserProfile create(DataInput in) throws IOException {
+    UserProfile m = new UserProfile();
     m.readFields(in);
     return m;
   }
@@ -139,65 +218,65 @@ public class UserProfile implements Writable {
    * @return newly-created object
    * @throws IOException
    */
-  public static RevisionRecord create(byte[] bytes) throws IOException {
+  public static UserProfile create(byte[] bytes) throws IOException {
     return create(new DataInputStream(new ByteArrayInputStream(bytes)));
   }
 
 
-public int getLength() {
-	return length;
+public long getNEdits() {
+	return nedits;
+}
+public void setNEdits(long nedits) {
+	this.nedits = nedits;
+}
+public long getNArticles() {
+	return narticles;
+}
+public void setNArticles(long narticles) {
+	this.narticles = narticles;
+}
+
+public void setEditMap(TreeMap<Long, Long> editmap){
+	this.dayedits = editmap;
+}
+
+public void setArticleMap(TreeMap<Long, Long> articlemap){
+	this.dayarticles = articlemap;
+}
+
+public TreeMap<Long,Long> getEditMap(){
+	return dayedits;
+	
+}
+
+public TreeMap<Long,Long> getArticleMap(){
+	return dayarticles;
+	
+}
+
+public void setNamespaceMap(TreeMap<Integer, Long> nscounts) {
+	this.namespacecounts = nscounts;
+	
+}
+
+public TreeMap<Integer,Long> getNamespaceMap(){
+	return namespacecounts;
+}
+
+public float getMeanTimeToNextEdit() {
+	return meanTimeToNextEdit;
+}
+
+public void setMeanTimeToNextEdit(float meanTimeToNextEdit) {
+	this.meanTimeToNextEdit = meanTimeToNextEdit;
 }
 
 
-public void setLength(int length) {
-	this.length = length;
+public float getMeanEditBytes() {
+	return meanEditBytes;
 }
 
-
-
-public int getNamespace() {
-	return namespace;
-}
-
-
-
-public void setNamespace(int namespace) {
-	this.namespace = namespace;
-}
-
-
-
-public long getTime() {
-	return time;
-}
-
-
-
-public void setTime(long time) {
-	this.time = time;
-}
-
-/*
-
-public String getUsername() {
-	return username;
-}
-
-
-
-public void setUsername(String username) {
-	this.username = username;
-}
-*/
-
-
-public String getArticle() {
-	return article;
-}
-
-
-
-public void setArticle(String article) {
-	this.article = article;
+public void setMeanEditBytes(float meanEditBytes) {
+	this.meanEditBytes = meanEditBytes;
 }
 }
