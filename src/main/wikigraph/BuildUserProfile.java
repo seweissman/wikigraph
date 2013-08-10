@@ -283,8 +283,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 						profile.setNEdits(nedits);
 						profile.setEditMap(dayedits);
 						profile.setArticleMap(dayarticles);
-						profile.setMeanTimeToNextEdit(sumTime/nedits);
-						profile.setMeanEditBytes(sumBytes/nedits);
+						profile.setTimeToNextEdit(sumTime);
+						profile.setEditBytes(sumBytes);
 						profile.setNamespaceMap(nscounts);
 					//	System.out.println("output = " + userOut + "," + profile);
 						context.write(userOut, profile);
@@ -334,8 +334,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					profile.setEditMap(dayedits);
 					profile.setArticleMap(dayarticles);
 					profile.setNamespaceMap(nscounts);
-					profile.setMeanTimeToNextEdit(sumTime/nedits);
-					profile.setMeanEditBytes(sumBytes/nedits);
+					profile.setTimeToNextEdit(sumTime);
+					profile.setEditBytes(sumBytes);
 					context.write(userOut, profile);
 				}
 			}

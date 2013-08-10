@@ -55,8 +55,10 @@ public class UserProfile implements Writable {
 
 	private long nedits;
 	private long narticles;
-	private float meanTimeToNextEdit;
-	private float meanEditBytes;
+	//private float meanTimeToNextEdit;
+	private long timeToNextEdit;
+	//private float meanEditBytes;
+	private long editBytes;
 
 	private TreeMap<Long,Long> dayedits;
 	private TreeMap<Long,Long> dayarticles;
@@ -64,11 +66,11 @@ public class UserProfile implements Writable {
 	
   public UserProfile() {}
 
-  public UserProfile(long nedits, long narticles, float meanTime, float meanBytes){
+  public UserProfile(long nedits, long narticles, long time, long bytes){
 		this.nedits = nedits;
 		this.narticles = narticles;
-		this.meanTimeToNextEdit = meanTime;
-		this.meanEditBytes = meanBytes;
+		this.timeToNextEdit = time;
+		this.editBytes = bytes;
 		//dayedits = new TreeMap<Long,Long>();
 		//dayarticles = new TreeMap<Long,Long>();
 	}
@@ -82,8 +84,8 @@ public class UserProfile implements Writable {
 	public void readFields(DataInput in) throws IOException {
 	  	nedits = in.readLong();
 		narticles = in.readLong();
-		meanTimeToNextEdit = in.readFloat();
-		meanEditBytes = in.readFloat();
+		timeToNextEdit = in.readLong();
+		editBytes = in.readLong();
 		
 		dayedits = new TreeMap<Long,Long>();
 		dayarticles = new TreeMap<Long,Long>();
@@ -128,8 +130,8 @@ public class UserProfile implements Writable {
 	public void write(DataOutput out) throws IOException {
 		out.writeLong(nedits);
 		out.writeLong(narticles);
-		out.writeFloat(meanTimeToNextEdit);
-		out.writeFloat(meanEditBytes);
+		out.writeLong(timeToNextEdit);
+		out.writeLong(editBytes);
 		
 		out.writeInt(dayedits.keySet().size());
 		for(long key : dayedits.keySet()){
@@ -176,9 +178,9 @@ public class UserProfile implements Writable {
 	  long activespan = dayedits.lastKey() - dayedits.firstKey();
 	  sb.append(activespan);
 	  sb.append(",");
-	  sb.append(meanTimeToNextEdit);
+	  sb.append(timeToNextEdit);
 	  sb.append(",");
-	  sb.append(meanEditBytes);
+	  sb.append(editBytes);
 	  sb.append("]");
 	  return sb.toString();
     }
@@ -263,20 +265,20 @@ public TreeMap<Integer,Long> getNamespaceMap(){
 	return namespacecounts;
 }
 
-public float getMeanTimeToNextEdit() {
-	return meanTimeToNextEdit;
+public long getTimeToNextEdit() {
+	return timeToNextEdit;
 }
 
-public void setMeanTimeToNextEdit(float meanTimeToNextEdit) {
-	this.meanTimeToNextEdit = meanTimeToNextEdit;
+public void setTimeToNextEdit(long timeToNextEdit) {
+	this.timeToNextEdit = timeToNextEdit;
 }
 
 
-public float getMeanEditBytes() {
-	return meanEditBytes;
+public long getEditBytes() {
+	return editBytes;
 }
 
-public void setMeanEditBytes(float meanEditBytes) {
-	this.meanEditBytes = meanEditBytes;
+public void setEditBytes(long editBytes) {
+	this.editBytes = editBytes;
 }
 }
