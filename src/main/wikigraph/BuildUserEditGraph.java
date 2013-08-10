@@ -63,6 +63,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
     	static TreeMap<Long,RevisionRecord> revisionMap = new TreeMap<Long,RevisionRecord>();
     	static TreeMap<PairOfStrings,Integer> userCoEditCounts = new TreeMap<PairOfStrings,Integer>();
     	
+    	@Override
         public void map(LongWritable key, Text p, Context context)
                 throws IOException, InterruptedException {
                
