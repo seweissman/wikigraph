@@ -290,8 +290,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 				if(!user.equals(lastuser)){
 					// Only output if user has made more than one edit over more than one day
 					// Should count number of users that don't meet this criteria
-					long span = dayedits.lastKey() - dayedits.firstKey();
-					if(nedits > 1 && span > 1){
+					//long span = dayedits.lastKey() - dayedits.firstKey();
+					//if(nedits > 1 && span > 1){
 						userOut = new Text();
 						profile = new UserProfile();
 						userOut.set(lastuser);
@@ -307,7 +307,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 						profile.setNamespaceMap(nscounts);
 					//	System.out.println("output = " + userOut + "," + profile);
 						context.write(userOut, profile);
-					}
+					//}
 					dayedits = new TreeMap<Long,Long>();
 					dayarticles = new TreeMap<Long,Long>();
 					nscounts = new TreeMap<Integer,Long>();
@@ -348,7 +348,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 			
 			@Override
 			public void cleanup(Context context) throws IOException, InterruptedException{
-				if(narticles != 0 || nedits != 0){
+				//if(narticles != 0 || nedits != 0){
 					UserProfile profile;
 					Text userOut;
 					
@@ -366,7 +366,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					profile.setBytesAdded(sumAddBytes);
 					profile.setBytesRemoved(sumRemoveBytes);
 					context.write(userOut, profile);
-				}
+				//}
 			}
 	    	
 	    }

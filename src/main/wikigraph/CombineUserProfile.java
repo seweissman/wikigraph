@@ -2,12 +2,8 @@ package wikigraph;
 
 
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -21,12 +17,9 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -36,7 +29,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import edu.umd.cloud9.io.pair.PairOfStringLong;
 	
 	public class CombineUserProfile extends Configured implements Tool {
 	    private static final Logger LOG = Logger.getLogger(CombineUserProfile.class);
@@ -103,7 +95,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 				TreeMap<Long,Long> articlemap = new TreeMap<Long,Long>();
 				TreeMap<Long,Long> editmap = new TreeMap<Long,Long>();
 				
-				UserProfile outprofile = new UserProfile();
+			
 
 				Iterator<UserProfile> profileIt = profiles.iterator();
 				long sumedits = 0;
@@ -145,18 +137,23 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					}
 					
 				}
-				outprofile.setArticleMap(articlemap);
-				outprofile.setEditMap(editmap);
-				outprofile.setNamespaceMap(nsmap);
-				outprofile.setNAddEdits(nadds);
-				outprofile.setNRemoveEdits(nremoves);
-				outprofile.setBytesAdded(sumaddbytes);
-				outprofile.setBytesRemoved(sumremovebytes);
-				outprofile.setNArticles(sumarticles);
-				outprofile.setNEdits(sumedits);
-				outprofile.setTimeToNextEdit(sumtime);
+				
+				long span = editmap.lastKey() - editmap.firstKey();
+				if(sumedits > 1 && span > 1){
+					UserProfile outprofile = new UserProfile();
+					outprofile.setArticleMap(articlemap);
+					outprofile.setEditMap(editmap);
+					outprofile.setNamespaceMap(nsmap);
+					outprofile.setNAddEdits(nadds);
+					outprofile.setNRemoveEdits(nremoves);
+					outprofile.setBytesAdded(sumaddbytes);
+					outprofile.setBytesRemoved(sumremovebytes);
+					outprofile.setNArticles(sumarticles);
+					outprofile.setNEdits(sumedits);
+					outprofile.setTimeToNextEdit(sumtime);
 
-				context.write(userkey, outprofile);
+					context.write(userkey, outprofile);
+				}
 				
 			}
 			
@@ -228,9 +225,6 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	        job.setOutputFormatClass(SequenceFileOutputFormat.class);
 	        //conf.setOutputFormat(TextOutputFormat.class);
 	        
-	        
-	        job.setMapOutputKeyClass(PairOfStringLong.class);
-	        job.setMapOutputValueClass(RevisionRecord.class);
 	        
 	        job.setOutputKeyClass(Text.class);
 	        job.setOutputValueClass(UserProfile.class);
