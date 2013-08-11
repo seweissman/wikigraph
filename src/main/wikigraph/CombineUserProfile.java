@@ -125,7 +125,7 @@ import org.apache.log4j.Logger;
 					}
 					
 					profilearticlemap = profile.getArticleMap();
-					for(long key : profilensmap.keySet()){
+					for(long key : profilearticlemap.keySet()){
 						if(!articlemap.containsKey(key)) articlemap.put(key, 0l);
 						articlemap.put(key, articlemap.get(key) + profilearticlemap.get(key));
 					}
