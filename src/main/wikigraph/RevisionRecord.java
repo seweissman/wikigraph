@@ -78,6 +78,8 @@ public class RevisionRecord implements Writable {
 	  	//username = in.readUTF();
 	  	time = in.readLong();
 	  	timeToNextEdit = in.readLong();
+	  	bytesAdded = in.readInt();
+	  	bytesRemoved = in.readInt();
 	}
 
 	/**
@@ -93,6 +95,8 @@ public class RevisionRecord implements Writable {
 		//out.writeUTF(username);
 		out.writeLong(time);
 		out.writeLong(timeToNextEdit);
+		out.writeInt(bytesAdded);
+		out.writeInt(bytesRemoved);
 
 	}
 
@@ -105,7 +109,10 @@ public class RevisionRecord implements Writable {
 	  sb.append(article + ",");
 	  sb.append(time + ",");
 	  sb.append(timeToNextEdit + ",");
-	  sb.append(length + "]");
+	  sb.append(length + ",");
+	  sb.append(bytesAdded + ",");
+	  sb.append(bytesRemoved + ",");
+	  sb.append("]");
 	  return sb.toString();
     }
      
