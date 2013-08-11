@@ -216,7 +216,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	        job.setJobName(String.format("GetWikiStats[%s: %s, %s: %s]", INPUT, inputPath, OUTPUT, outputPath));
 	               
 
-	        job.setNumReduceTasks(20);
+	        job.setNumReduceTasks(1);
 
 	        job.setMapperClass(ProfileMapper.class);
 	        job.setReducerClass(ProfileReducer.class);
@@ -234,11 +234,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 	        Path outPath = new Path(outputPath);
 	        Path inPath = new Path(inputPath);
 	        
-	        FileStatus[] inglob = fs.globStatus(inPath);
-	        for(FileStatus f : inglob){
-	        	FileInputFormat.addInputPath(job, f.getPath());
-	        }
-	        //FileInputFormat.setInputPaths(job, new Path(inputPath));
+	        FileInputFormat.setInputPaths(job, inPath);
 	        FileOutputFormat.setOutputPath(job, outPath);
 	        
 	        // Delete the output directory if it exists already.
