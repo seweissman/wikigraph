@@ -107,7 +107,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 				long nedits = profile.getNEdits();
 				long narticles = profile.getNArticles();
 				long timetonext = profile.getTimeToNextEdit();
-				long span = editmap.firstKey() - editmap.lastKey();
+				long span = editmap.lastKey() - editmap.firstKey();
 
 				ArrayListOfLongsWritable statlist = new ArrayListOfLongsWritable();
 				statlist.add(addbytes);
