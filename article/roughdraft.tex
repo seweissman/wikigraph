@@ -1,0 +1,147 @@
+\documentclass{article}
+\usepackage{url}
+\usepackage{algpseudocode}
+\usepackage{verbatim}
+\usepackage{microtype}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{epsfig}
+\usepackage{algorithmicx}
+\usepackage{algorithm}
+\usepackage{authblk}
+
+\begin{document}
+
+\title{Finding Bots and Spammers on Wikipedia}
+
+
+\author[1]{Sarah Weissman (sew@umd.edu)}
+\affil[1]{University of Maryland, College of Information Studies}
+
+\date{August 16, 2013}
+
+\maketitle
+\begin{abstract}
+\end{abstract}
+
+\section{Introduction}
+
+Wikipedia is an open-source collaboratively edited encyclopedia. It is viewable and editable by anyone, with editing changes viewable immediately. Although Wikipedia is not a social network, Collaborative editing on Wikipedia has its social aspects. Although it is possible to edit Wikipedia anonymously, or to merely view Wikipedia without editing at all, many Wikipedia editors create user accounts. User accounts have associated User pages. Although these pages are not profiles (link to Wikipedia policy), they are spaces in which user-to-user communication takes place and serve as a scratch space where users can work on drafts of articles. Many editors organize themselves around communities (projects?) focused on editing or expanding Wikipedia content on specific topics or on other Wikipedia adminstistrative editing tasks. (Examples of communities?)
+
+In this paper we use techniques from social network analysis to attempt to identify certain types of user behaviour on Wikipedia. Specifically we are interested in identifying bots and spammers. Although the behaviour of bots and spammers might be considered anti-social, rather than social, the ability to identify them can benefit social nework analysis of Wikipedia in several ways. Filtering out such users can give a more balanced view of the network of Wikipedia editors. Although bots are allowed on Wikipedia and serve an important purpose, since they have the potential to make many more edits to many more articles in a short period of time than a human user, their behavior can make their editing contributions look more significant than it actually is to a network. Spammers are useful to detect, since their behavior is undesirable and if detected could be automatically stopped. Spammers may also clutter up the network by editing anonymously and unpredictably.
+
+Define spammers and bots more precisely.
+
+Techniques for big data processing make it easier to get a big picture of the Wikipedia network of editors. We take advantage of the MapReduce to process user data.
+
+\section{Related Work}
+%    Related work - a literature review of papers on similar topics
+
+There have been many studies of the social nature of wikipedia editing. Most research focuses on a dynamic analysis where changes in the edit graph are viewed over time or for a specific window of time around a particular event. However, many of the newest and most comprehensive studies of collaborative Wikipedia editing use older data sets (most often data from 2006/2007).
+
+Iba, et al. (2010) use ``dynamic social network analyssis'' to analyze editing patterns of Wikipedia contributors to 2580 featured articles from English Wikipedia. They identify two categories of edotrs, coolfarmers and egoboosters. Coolfarmers are prolific editors who create original content, often focusing on things that are ``cool'' or newsworthy. Egoboosters spend most of their time ``polishing their own profile.'' Since Wikipedia editors do not have a personal profile page, it is unclear whether Egoboosters are editors who write Wikipedia articles about themselves, or who mostly post on their on User namespace page. Iba, et al. suggest that coolfarming behavior can be characterized using high betweenness centrality in the edit graph around the time period in which an article is being created, but do not develop specific criteria for identifying such user behavior.
+
+West, et. al (2010) build a classifier to detect vandalism on Wikipedia for a years worth of edits, using a number of simple and aggregate features such as IP address, time since user registration, time of last edit, and reision comment length. They take advantage of use ``time-delayed behavioral observations'' and use edit reversion to define their data set for modeling.
+
+Welser, et. al (2011) use structural signatures of egocentric networks to identify four key roles of Wikipedia editors: substantive experts, technical editors, vandal fighters and social networkers (122). Using a combination of hand picked accounts. Distribution across namespaces. They use data from 2006 to build a user network based on edits to the User:Talk namespace. Although they profile highly prolific editors, they do not distinguish bot behavior from manual editing.
+
+Viegas, et al. (2007) user ``history flow visualization'' to examine the evolution of Wikipedia articles over time. Because these profiles depend on content changes, have to parse content to see how it has changed over time.
+
+Laniado, et al. (2011) use longevity of page modifications to distinguish significant contributors. Similar to Viegas (2007) this type of analysis requires parsing page content to identify edit persistance. This study demonstrates how small subcommunities focused around topics can potentailly be characterized using clustering coefficients. They also use a data set from 2007 for their study.
+
+\section{Research questions and setup}
+Using a current data set from the lastest dump of English language Wikipedia (enwiki), we combine both a time to next edit approach and a namespace profile, as well as distribution of article edits, raw article edit counts over time to characterize user behavior with the goal of identifying bots and spammers.
+
+%    Research questions and setup - are you doing an experiment? Running a survey? Doing an analysis? Lay that all out here.
+
+\subsection{Data set} 
+Our data set is the dump of all revision metadata for English Wikipedia taken from \url{dumps.wikimedia.org} for 07/08/2013. It contains revision metadata for pages across all Wikipedia namespaces.  How big is this dump? 
+
+\subsection{Processing and sampling Wikipedia with MapReduce}
+
+Taking advantage of the Hadoop MapReduce framework, we can produce the co-edit graph and user profiles from just the revision metadata, no page content analysis is involved. Sampling?
+
+A page record in the wiki history includes the article name, namespace and a collection of revision record. A wiki revision record is as follows:
+\begin{verbatim}
+    <revision>
+    <id>4407235</id>
+    <parentid>2527990</parentid>
+    <timestamp>2004-02-25T18:55:21Z</timestamp>
+    <contributor>
+      <username>Dori</username>
+      <id>6878</id>
+    </contributor>
+    <minor/>
+    <comment>restoring blanked content, no reason given</comment>
+    <text id="4407235" bytes="538" />
+    <sha1>cgc468uc4empeg5jggze1lsb87vquuc</sha1>
+    <model>wikitext</model>
+    <format>text/x-wiki</format>
+  </revision>
+\end{verbatim}
+
+It contains a timestamp, user name (or IP address). Comment, and revision size in bytes. Use custom code (available at http://github.com/seweissman/wikigraph) to build user profiles and edge graph. 
+
+\subsection{Profiling user behavior}
+
+We create a static profile of user behavior using a number of variables derived from the revision metadata. In order to reduce the number of users considered we filter out users with only one edit or who are active for only one day. (Also filter IP?)
+
+\begin{itemize}
+\item Number of edits and number of article edits.
+\item Distribution of edits per day
+\item Distribution of edits over namespaces.
+\item Total number of edits
+\item Mean net bytes added/removed over all edits
+\item Number of positive (net bytes added) edits.
+\item Number of negative (net bytes removed) edits.
+\item Mean time to re-edit (of the same Wikipedia article)
+\end{itemize}
+
+In building user profiles we consider the total number of edits and total number of uniqe articles edited by a user, as well as the distribution of edits over time. We expect that bots may make significantly more edits than average and achieve these edits in a short period of time. Malicious or spam accounts may only be active over short periods of time, after which a new account is created to help avoid detection (REF?).
+
+Following West et al. (2010) we consider the time it takes for articles to be edited following a user edit, although we do not distinguish the specific case of a reversion by a privileged user. Since Wikipedia has been found to have a ``quick repair'' property (Viegas YEAR) where malicious edits are reverted quickly (often within minutes), we expect the time to next re-edit to be shorter for users making malicious edits, since these will be quickly undone. Similarly, we look at the mean net positive and negative bytes contributed by a user. Net contributions can give insight into a users behavior. Malicious users or bots may be identified by a tendency only to remove or add content.
+
+Followig Welser, we also consider distribution of edits over namespaces. 
+
+%Other things:
+%\begin{itemize}
+%\item How to choose users to look at? How to measure whether a user is a spammer or not.
+%\item Are there other interesting user behaviours that fall out of user profile?
+%\end{itemize}
+
+\subsection{The network graph}
+
+In order to investigate the network structure, we use the co-edit graph as defined in Iba (YEAR). Nodes are uers. A direct edge from user A to user B if B edits the article directly after A. Additionally, in our graph we weight edges by number of such co-edits, throwing away edges of weight 1. 
+
+%Other possibilities
+%\begin{itemize}
+%\item User - article graph. Nodes are articles and users. An (undirected) edge from User A to Article X if A edits X.
+%\item Clustering/centrality measures? (I have a PageRank implementation.)
+%\end{itemize}
+
+\section{Results}
+% Results - here, you report exactly what you found, but with no interpretation
+\subsection{The overall picture}
+Number of articles, number of users, number of edits. Average edits, average length of account (from first edit to most recent). Size of edits. Time since last edit and time to next edit.
+
+\subsection{User profiling}
+
+\subsection{User co-edit network Visualization}
+
+After processing the revision metadata the graph includes 26251504 edges. Filtering out edges of weight 1 leaves 2611449 edges. How many nodes? Results from Weight distribution, degree centrality and weighted degree centrality.
+
+Using Gephi to visualize. Might make sense to program some sort of centrality measures (e.g. degree centrality) outside of Gephi because they will scale better.
+
+\section{Discussion}
+\subsection{Success?}
+Were the hypotheses validated? Manually inspect users to see if they actually correspond to spammers and bots.
+%    Discussion - interpret the results and make generalizations and broader lessons
+\subsection{Limitations}
+What were some of the limitations? What are the opportunities for future work?
+\begin{itemize}
+\item With more time there would be more opportunities to validate results better, form better hypotheses using manual analysis.
+\end{itemize}
+\section{Conclusions}
+\section{Reference}
+Figure out this bibtex thing.
+\end{document}

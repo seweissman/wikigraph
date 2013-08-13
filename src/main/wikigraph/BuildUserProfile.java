@@ -265,7 +265,6 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 			public static TreeMap<Long,Long> dayedits = new TreeMap<Long,Long>();
 			public static TreeMap<Long,Long> dayarticles = new TreeMap<Long,Long>();
 			public static TreeMap<Integer,Long> nscounts = new TreeMap<Integer,Long>();
-			public static long narticles = 0;
 			public static long nedits = 0;
 			public static long addedits = 0;
 			public static long removeedits = 0;
@@ -296,7 +295,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 						userOut = new Text();
 						profile = new UserProfile();
 						userOut.set(lastuser);
-						profile.setNArticles(narticles);
+						profile.setNArticles(articleSet.size());
 						profile.setNEdits(nedits);
 						profile.setEditMap(dayedits);
 						profile.setArticleMap(dayarticles);
@@ -312,15 +311,15 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					dayarticles = new TreeMap<Long,Long>();
 					nscounts = new TreeMap<Integer,Long>();
 					nedits = 0;
-					narticles = 0;
 					sumTime = 0;
 					sumAddBytes = 0;
 					sumRemoveBytes = 0;
 					addedits = 0;
 					removeedits = 0;
+					articleSet.clear();
 				}
 				
-				articleSet.clear();
+				
 				Iterator<RevisionRecord> recordsIt = records.iterator();
 				long dayct = 0;
 				while(recordsIt.hasNext()){
@@ -340,7 +339,6 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 				dayarticles.put(day, (long) articleSet.size());
 				dayedits.put(day, dayct);
 				nedits += dayct;
-				narticles += articleSet.size();
 				lastuser = user;
 				
 			}
@@ -354,7 +352,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					userOut = new Text();
 					profile = new UserProfile();
 					userOut.set(lastuser);
-					profile.setNArticles(narticles);
+					profile.setNArticles(articleSet.size());
 					profile.setNEdits(nedits);
 					profile.setEditMap(dayedits);
 					profile.setArticleMap(dayarticles);
