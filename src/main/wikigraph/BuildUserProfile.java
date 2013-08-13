@@ -270,6 +270,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 			public static long removeedits = 0;
 			public static String lastuser = null;
 			HashSet<String> articleSet = new HashSet<String>();
+			HashSet<String> dayArticleSet = new HashSet<String>();
 			public static long sumTime = 0;
 			public static long sumAddBytes = 0;
 			public static long sumRemoveBytes = 0;
@@ -321,24 +322,26 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 				
 				
 				Iterator<RevisionRecord> recordsIt = records.iterator();
-				long dayct = 0;
+				long dayeditct = 0;
+				dayArticleSet.clear();
 				while(recordsIt.hasNext()){
 					RevisionRecord r = recordsIt.next();
 					int ns = r.getNamespace();
 					if(!nscounts.containsKey(ns)) nscounts.put(ns, 0l);
 					nscounts.put(ns, nscounts.get(ns) + 1);
-					articleSet.add(r.getArticle());
+					dayArticleSet.add(r.getArticle());
 					sumTime += r.getTimeToNextEdit();
 					sumAddBytes += r.getBytesAdded();
 					sumRemoveBytes += r.getBytesRemoved();
 					if(r.getBytesAdded() > 0) addedits++;
 					if(r.getBytesRemoved() > 0) removeedits++;
 					if(r.getBytesAdded() == 0 && r.getBytesRemoved() == 0) addedits++;
-					dayct++;
+					dayeditct++;
 				}
-				dayarticles.put(day, (long) articleSet.size());
-				dayedits.put(day, dayct);
-				nedits += dayct;
+				dayarticles.put(day, (long) dayArticleSet.size());
+				articleSet.addAll(dayArticleSet);
+				dayedits.put(day, dayeditct);
+				nedits += dayeditct;
 				lastuser = user;
 				
 			}
