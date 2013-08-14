@@ -255,12 +255,12 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 
 	        Configuration conf = getConf();
 	        // Set heap space - using old API
-	        conf.set("mapred.job.map.memory.mb", "2048");
-	        conf.set("mapred.map.child.java.opts", "-Xmx2048m");
+	        conf.set("mapred.job.map.memory.mb", "4096");
+	        conf.set("mapred.map.child.java.opts", "-Xmx4096m");
 	        conf.set("mapred.job.reduce.memory.mb", "6144");
 	        conf.set("mapred.reduce.child.java.opts", "-Xmx6144m");
-	        conf.set("xmlinput.start","page");
-	        conf.set("xmlinput.end","page");
+	        conf.set("xmlinput.start","<page>");
+	        conf.set("xmlinput.end","</page>");
 	        //conf.set("mapred.child.java.opts", "-Xmx2048m");
 
 	        Job job = Job.getInstance(conf);
