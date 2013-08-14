@@ -315,8 +315,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	    }
 	    
 	    private static class RevisionReducer extends Reducer<PairOfStringLong, RevisionRecord, Text, UserProfile> {
-			public static TreeMap<Long,Long> dayedits = new TreeMap<Long,Long>();
-			public static TreeMap<Long,Long> dayarticles = new TreeMap<Long,Long>();
+			//public static TreeMap<Long,Long> dayedits = new TreeMap<Long,Long>();
+			//public static TreeMap<Long,Long> dayarticles = new TreeMap<Long,Long>();
 			public static TreeMap<Integer,Long> nscounts = new TreeMap<Integer,Long>();
 			public static long nedits = 0;
 			public static long addedits = 0;
@@ -327,12 +327,15 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 			public static long sumTime = 0;
 			public static long sumAddBytes = 0;
 			public static long sumRemoveBytes = 0;
+			public static long lastDay = -1;
+			public static long startDay = 0;
 			
 			@Override
 			public void reduce(PairOfStringLong key, Iterable<RevisionRecord> records, Context context)
 			       throws IOException, InterruptedException {
 				//System.out.println("key = " + key);
 				long day = key.getRightElement();
+				if(lastDay == -1) lastDay = day;
 				String user = key.getLeftElement();
 				UserProfile profile;
 				Text userOut;
@@ -351,18 +354,20 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 						userOut.set(lastuser);
 						profile.setNArticles(articleSet.size());
 						profile.setNEdits(nedits);
-						profile.setEditMap(dayedits);
-						profile.setArticleMap(dayarticles);
+						//profile.setEditMap(dayedits);
+						//profile.setArticleMap(dayarticles);
 						profile.setTimeToNextEdit(sumTime);
 						profile.setBytesAdded(sumAddBytes);
 						profile.setBytesRemoved(sumRemoveBytes);
 						profile.setNAddEdits(addedits);
 						profile.setNRemoveEdits(removeedits);
 						profile.setNamespaceMap(nscounts);
+						profile.setFirstEdit(startDay);
+						profile.setLastEdit(lastDay);
 						context.write(userOut, profile);
 					//}
-					dayedits = new TreeMap<Long,Long>();
-					dayarticles = new TreeMap<Long,Long>();
+					//dayedits = new TreeMap<Long,Long>();
+					//dayarticles = new TreeMap<Long,Long>();
 					nscounts = new TreeMap<Integer,Long>();
 					nedits = 0;
 					sumTime = 0;
@@ -370,6 +375,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					sumRemoveBytes = 0;
 					addedits = 0;
 					removeedits = 0;
+					startDay = day;
 					articleSet.clear();
 				}
 				
@@ -391,9 +397,9 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					if(r.getBytesAdded() == 0 && r.getBytesRemoved() == 0) addedits++;
 					dayeditct++;
 				}
-				dayarticles.put(day, (long) dayArticleSet.size());
+				//dayarticles.put(day, (long) dayArticleSet.size());
 				articleSet.addAll(dayArticleSet);
-				dayedits.put(day, dayeditct);
+				//dayedits.put(day, dayeditct);
 				nedits += dayeditct;
 				lastuser = user;
 				
@@ -410,8 +416,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					userOut.set(lastuser);
 					profile.setNArticles(articleSet.size());
 					profile.setNEdits(nedits);
-					profile.setEditMap(dayedits);
-					profile.setArticleMap(dayarticles);
+					//profile.setEditMap(dayedits);
+					//profile.setArticleMap(dayarticles);
 					profile.setNamespaceMap(nscounts);
 					profile.setTimeToNextEdit(sumTime);
 					profile.setNAddEdits(addedits);
@@ -466,8 +472,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 
 	        Configuration conf = getConf();
 	        // Set heap space - using old API
-	        conf.set("mapred.job.map.memory.mb", "4096");
-	        conf.set("mapred.map.child.java.opts", "-Xmx4096m");
+	        conf.set("mapred.job.map.memory.mb", "6144");
+	        conf.set("mapred.map.child.java.opts", "-Xmx6144m");
 	        conf.set("mapred.job.reduce.memory.mb", "6144");
 	        conf.set("mapred.reduce.child.java.opts", "-Xmx6144m");
 	        conf.set("xmlinput.start","<page>");

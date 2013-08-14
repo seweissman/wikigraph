@@ -92,8 +92,8 @@ import org.apache.log4j.Logger;
 				//System.out.println("key = " + key);
 
 				TreeMap<Integer,Long> nsmap = new TreeMap<Integer,Long>();
-				TreeMap<Long,Long> articlemap = new TreeMap<Long,Long>();
-				TreeMap<Long,Long> editmap = new TreeMap<Long,Long>();
+				//TreeMap<Long,Long> articlemap = new TreeMap<Long,Long>();
+				//TreeMap<Long,Long> editmap = new TreeMap<Long,Long>();
 				
 			
 
@@ -106,8 +106,10 @@ import org.apache.log4j.Logger;
 				long nremoves = 0;
 				long sumtime = 0;
 				TreeMap<Integer,Long> profilensmap;
-				TreeMap<Long,Long> profilearticlemap;
-				TreeMap<Long,Long> profileeditmap;
+				//TreeMap<Long,Long> profilearticlemap;
+				//TreeMap<Long,Long> profileeditmap;
+				long minFirstEdit = Long.MAX_VALUE;
+				long maxLastEdit = Long.MIN_VALUE;
 				while(profileIt.hasNext()){
 					UserProfile profile = profileIt.next();
 					sumarticles += profile.getNArticles();
@@ -123,7 +125,7 @@ import org.apache.log4j.Logger;
 						if(!nsmap.containsKey(key)) nsmap.put(key, 0l);
 						nsmap.put(key, nsmap.get(key) + profilensmap.get(key));
 					}
-					
+					/*
 					profilearticlemap = profile.getArticleMap();
 					for(long key : profilearticlemap.keySet()){
 						if(!articlemap.containsKey(key)) articlemap.put(key, 0l);
@@ -135,14 +137,23 @@ import org.apache.log4j.Logger;
 						if(!editmap.containsKey(key)) editmap.put(key, 0l);
 						editmap.put(key, editmap.get(key) + profileeditmap.get(key));
 					}
+					*/
+					if(profile.getFirstEdit() < minFirstEdit){
+						minFirstEdit = profile.getFirstEdit();
+					}
+					if(profile.getLastEdit() > maxLastEdit){
+						maxLastEdit = profile.getLastEdit();
+					}
 					
 				}
 				
-				long span = editmap.lastKey() - editmap.firstKey();
+				long span = maxLastEdit - minFirstEdit;
 				if(sumedits > 1 && span > 1){
 					UserProfile outprofile = new UserProfile();
-					outprofile.setArticleMap(articlemap);
-					outprofile.setEditMap(editmap);
+					//outprofile.setArticleMap(articlemap);
+					//outprofile.setEditMap(editmap);
+					outprofile.setFirstEdit(minFirstEdit);
+					outprofile.setLastEdit(maxLastEdit);
 					outprofile.setNamespaceMap(nsmap);
 					outprofile.setNAddEdits(nadds);
 					outprofile.setNRemoveEdits(nremoves);

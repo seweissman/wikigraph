@@ -63,9 +63,11 @@ public class UserProfile implements Writable {
 	private long nAddEdits;
 	private long nRemoveEdits;
 
-	private TreeMap<Long,Long> dayedits;
-	private TreeMap<Long,Long> dayarticles;
+	//private TreeMap<Long,Long> dayedits;
+	//private TreeMap<Long,Long> dayarticles;
 	private TreeMap<Integer,Long> namespacecounts;
+	private long lastEdit;
+	private long firstEdit;
 	
   public UserProfile() {}
 
@@ -92,13 +94,14 @@ public class UserProfile implements Writable {
 		bytesAdded = in.readLong();
 		bytesRemoved = in.readLong();
 		
-		dayedits = new TreeMap<Long,Long>();
-		dayarticles = new TreeMap<Long,Long>();
+		//dayedits = new TreeMap<Long,Long>();
+		//dayarticles = new TreeMap<Long,Long>();
 	  	namespacecounts = new TreeMap<Integer,Long>();
 
 	  	int i=0;
 	  	long key;
 	  	long val;
+	  	/*
 	  	int nkeys = in.readInt();
 	  	while(i<nkeys){
 	  		key = in.readLong();
@@ -114,8 +117,9 @@ public class UserProfile implements Writable {
 	  		dayarticles.put(key, val);
 	  		i++;
 	  	}
+	  	*/
 	  	i=0;
-	  	nkeys = in.readInt();
+	  	int nkeys = in.readInt();
 	  	int key2;
 	  	while(i<nkeys){
 	  		key2 = in.readInt();
@@ -140,7 +144,7 @@ public class UserProfile implements Writable {
 		out.writeLong(timeToNextEdit);
 		out.writeLong(bytesAdded);
 		out.writeLong(bytesRemoved);
-		
+		/*
 		out.writeInt(dayedits.keySet().size());
 		for(long key : dayedits.keySet()){
 			out.writeLong(key);
@@ -151,6 +155,7 @@ public class UserProfile implements Writable {
 			out.writeLong(key);
 			out.writeLong(dayarticles.get(key));
 		}
+		*/
 		out.writeInt(namespacecounts.keySet().size());
 		for(int key : namespacecounts.keySet()){
 			out.writeInt(key);
@@ -165,6 +170,7 @@ public class UserProfile implements Writable {
 	  sb.append("[");
 	  sb.append(nedits + ",");
 	  sb.append(narticles + ",");
+	  /*
 	  sb.append("[");
 	  for(long key : dayedits.keySet()){
 		 if(key != dayarticles.firstKey()) sb.append(",");
@@ -177,13 +183,14 @@ public class UserProfile implements Writable {
 	  	sb.append("{" + key + "," + dayarticles.get(key) + "}");
 	  }
 	  sb.append("],");
+	  */
 	  sb.append("[");
 	  for(int key : namespacecounts.keySet()){
 		if(key != namespacecounts.firstKey()) sb.append(",");
 	  	sb.append("{" + key + "," + namespacecounts.get(key) + "}");
 	  }
 	  sb.append("],");
-	  long activespan = dayedits.lastKey() - dayedits.firstKey();
+	  long activespan = lastEdit - firstEdit; //dayedits.lastKey() - dayedits.firstKey();
 	  sb.append(activespan);
 	  sb.append(",");
 	  sb.append(timeToNextEdit);
@@ -251,7 +258,7 @@ public long getNArticles() {
 public void setNArticles(long narticles) {
 	this.narticles = narticles;
 }
-
+/*
 public void setEditMap(TreeMap<Long, Long> editmap){
 	this.dayedits = editmap;
 }
@@ -269,7 +276,7 @@ public TreeMap<Long,Long> getArticleMap(){
 	return dayarticles;
 	
 }
-
+*/
 public void setNamespaceMap(TreeMap<Integer, Long> nscounts) {
 	this.namespacecounts = nscounts;
 	
@@ -319,4 +326,22 @@ public long getNAddEdits() {
 public void setNAddEdits(long nAddEdits) {
 	this.nAddEdits = nAddEdits;
 }
+
+public long getLastEdit() {
+	return lastEdit;
+}
+
+public void setLastEdit(long maxLastEdit) {
+	this.lastEdit = maxLastEdit;
+}
+
+public long getFirstEdit() {
+	return firstEdit;
+}
+
+public void setFirstEdit(long startDay) {
+	this.firstEdit = startDay;
+}
+
+
 }

@@ -99,7 +99,7 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 
 				TreeMap<Integer,Long> nsmap = profile.getNamespaceMap();
 				//TreeMap<Long,Long> articlemap = profile.getArticleMap();
-				TreeMap<Long,Long> editmap = profile.getEditMap();
+				//TreeMap<Long,Long> editmap = profile.getEditMap();
 				long addbytes = profile.getBytesAdded();
 				long removebytes = profile.getBytesRemoved();
 				long nadds = profile.getNAddEdits();
@@ -107,7 +107,8 @@ import edu.umd.cloud9.io.pair.PairOfStrings;
 				long nedits = profile.getNEdits();
 				long narticles = profile.getNArticles();
 				long timetonext = profile.getTimeToNextEdit();
-				long span = editmap.lastKey() - editmap.firstKey();
+				long span = profile.getLastEdit() - profile.getFirstEdit();
+						 //editmap.lastKey() - editmap.firstKey();
 
 				ArrayListOfLongsWritable statlist = new ArrayListOfLongsWritable();
 				statlist.add(addbytes);
