@@ -178,7 +178,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
             			timestamp = null;
 	            	}else if((m = titlePattern.matcher(line)).matches()){
 	            		title = m.group(1);
-	            		System.out.println("\tTITLE " + title);
+	            		//System.out.println("\tTITLE " + title);
 	            	}else if((m = userNamePattern.matcher(line)).matches()){
 	            		user = m.group(1);
 	            		//System.out.println("\tUSER " + user);
@@ -196,6 +196,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	            		//System.out.println("\tBYTES " + bytes);
 	            	}
 	            }
+	            
+//	            System.out.println("END PARSE LINES\n");
 	            
 	            lastTime = 0;
 	            long time = 0;
@@ -223,6 +225,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	            		PairOfStringLong userDate = new PairOfStringLong();
 	            		rout.setTime(startTime);
 	            		rout.setArticle(title);
+	            		rout.setLength(lastBytes);
 	            		rout.setNamespace(Integer.parseInt(ns));
 	            		
 	            		// Time between edit from user and next edit by different user
@@ -237,9 +240,10 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	            			rout.setBytesAdded(bytesdiff);
 	            		}
 	            		userDate.set(lastUser, time);
-	            		System.out.println("User = " + user);
-	            		System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
-	            		System.out.println("bytes = " + nbytes + " last bytes = " + lastBytes + " byte diff = " + bytesdiff);
+	            		//System.out.println("User = " + lastUser);
+	            		//System.out.println("Title = " + title);
+	            		//System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
+	            		//System.out.println("bytes = " + nbytes + " last bytes = " + lastBytes + " byte diff = " + bytesdiff);
 		            	//System.out.println(userDate + " " + r);
 	            		context.write(userDate, rout);
 						startTime = time;
@@ -253,6 +257,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	            bytesdiff = lastBytes - startBytes;
         		PairOfStringLong userDate = new PairOfStringLong();
         		rout.setTime(startTime);
+        		rout.setArticle(title);
+        		rout.setLength(lastBytes);
         		// If there is no next edit then timediff = -1
         		rout.setTimeToNextEdit(0);
         		if(bytesdiff < 0){
@@ -263,7 +269,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
         			rout.setBytesAdded(bytesdiff);
         		}
         		userDate.set(user, time);
-	       		//System.out.println("User = " + user);
+        		//System.out.println("User = " + user);
+        		//System.out.println("Title = " + title);
         		//System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
         		//System.out.println("bytes = " + nbytes + " last bytes = " + lastBytes + " byte diff = " + bytesdiff);
             	//System.out.println(userDate + " " + r);
@@ -461,8 +468,8 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	        conf.set("mapred.map.child.java.opts", "-Xmx2048m");
 	        conf.set("mapred.job.reduce.memory.mb", "6144");
 	        conf.set("mapred.reduce.child.java.opts", "-Xmx6144m");
-	        conf.set("xmlinput.start","page");
-	        conf.set("xmlinput.end","page");
+	        conf.set("xmlinput.start","<page>");
+	        conf.set("xmlinput.end","</page>");
 	        //conf.set("mapred.child.java.opts", "-Xmx2048m");
 
 	        Job job = Job.getInstance(conf);
