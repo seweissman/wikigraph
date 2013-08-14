@@ -178,7 +178,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
             			timestamp = null;
 	            	}else if((m = titlePattern.matcher(line)).matches()){
 	            		title = m.group(1);
-	            		//System.out.println("\tTITLE " + title);
+	            		System.out.println("\tTITLE " + title);
 	            	}else if((m = userNamePattern.matcher(line)).matches()){
 	            		user = m.group(1);
 	            		//System.out.println("\tUSER " + user);
@@ -199,32 +199,76 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 	            
 	            lastTime = 0;
 	            long time = 0;
+	            int startBytes = 0;
 	            int bytesdiff;
 	            int lastBytes = 0;
+	            long startTime = -1;
+
+	            String lastUser = null; // combine adjacent edits by same user
 	            int nbytes;
 	            for(long t : revisionMap.keySet()){
-	            	PairOfStringLong userDate = new PairOfStringLong();
-	            	RevisionRecord r = revisionMap.get(t);
+	            	
+	            	RevisionRecord r = revisionMap.get(t);	            	
 	            	time = r.getTime();
 	            	nbytes = r.getLength();
-	            	bytesdiff = nbytes - lastBytes;
-	            	long timediff = time - lastTime;
-	            	String name = r.getUsername();
-	            	r.setTimeToNextEdit(timediff);
-	            	if(bytesdiff < 0){
-	            		r.setBytesAdded(0);
-	            		r.setBytesRemoved(-1*bytesdiff);
-	            	}else{
-	            		r.setBytesRemoved(0);
-	            		r.setBytesAdded(bytesdiff);
+	            	user = r.getUsername();
+
+	            	if(lastUser == null) lastUser = user;
+	            	if(startTime == -1) startTime = time;
+	            	
+	            	if(!user.equals(lastUser)){
+	            		// Net difference in bytes between start edit and finish edit
+	            		RevisionRecord rout = new RevisionRecord();
+	            		bytesdiff = lastBytes - startBytes;
+	            		PairOfStringLong userDate = new PairOfStringLong();
+	            		rout.setTime(startTime);
+	            		rout.setArticle(title);
+	            		rout.setNamespace(Integer.parseInt(ns));
+	            		
+	            		// Time between edit from user and next edit by different user
+	            		//long timediff = time - lastTime;
+	            		long timediff = time - startTime;
+	            		rout.setTimeToNextEdit(timediff);
+	            		if(bytesdiff < 0){
+	            			rout.setBytesAdded(0);
+	            			rout.setBytesRemoved(-1*bytesdiff);
+	            		}else{
+		            		rout.setBytesRemoved(0);
+	            			rout.setBytesAdded(bytesdiff);
+	            		}
+	            		userDate.set(lastUser, time);
+	            		System.out.println("User = " + user);
+	            		System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
+	            		System.out.println("bytes = " + nbytes + " last bytes = " + lastBytes + " byte diff = " + bytesdiff);
+		            	//System.out.println(userDate + " " + r);
+	            		context.write(userDate, rout);
+						startTime = time;
+	            		startBytes = nbytes;
 	            	}
-	            	userDate.set(name, time);
-	            	//System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
-	            	//System.out.println(userDate + " " + r);
-	            	context.write(userDate, r);
 	            	lastTime = time;
 	            	lastBytes = nbytes;
+	            	lastUser = user;
 	            }
+	            RevisionRecord rout = new RevisionRecord();
+	            bytesdiff = lastBytes - startBytes;
+        		PairOfStringLong userDate = new PairOfStringLong();
+        		rout.setTime(startTime);
+        		// If there is no next edit then timediff = -1
+        		rout.setTimeToNextEdit(0);
+        		if(bytesdiff < 0){
+        			rout.setBytesAdded(0);
+        			rout.setBytesRemoved(-1*bytesdiff);
+        		}else{
+            		rout.setBytesRemoved(0);
+        			rout.setBytesAdded(bytesdiff);
+        		}
+        		userDate.set(user, time);
+	       		//System.out.println("User = " + user);
+        		//System.out.println("time = " + time + " last time = " + lastTime + " time diff = " + timediff);
+        		//System.out.println("bytes = " + nbytes + " last bytes = " + lastBytes + " byte diff = " + bytesdiff);
+            	//System.out.println(userDate + " " + r);
+        		context.write(userDate, rout);
+	            
 	            
 	        }
 	        
