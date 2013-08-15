@@ -349,6 +349,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 					// Should count number of users that don't meet this criteria
 					//long span = dayedits.lastKey() - dayedits.firstKey();
 					//if(nedits > 1 && span > 1){
+						
 						userOut = new Text();
 						profile = new UserProfile();
 						userOut.set(lastuser);
@@ -364,6 +365,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 						profile.setNamespaceMap(nscounts);
 						profile.setFirstEdit(startDay);
 						profile.setLastEdit(lastDay);
+						//System.out.println("User = " + lastuser + " startDay = " + startDay + " lastDay = " + lastDay);
 						context.write(userOut, profile);
 					//}
 					//dayedits = new TreeMap<Long,Long>();
@@ -402,6 +404,7 @@ import edu.umd.cloud9.io.pair.PairOfStringLong;
 				//dayedits.put(day, dayeditct);
 				nedits += dayeditct;
 				lastuser = user;
+				lastDay = day;
 				
 			}
 			

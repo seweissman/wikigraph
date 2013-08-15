@@ -93,6 +93,8 @@ public class UserProfile implements Writable {
 		timeToNextEdit = in.readLong();
 		bytesAdded = in.readLong();
 		bytesRemoved = in.readLong();
+		firstEdit = in.readLong();
+		lastEdit = in.readLong();
 		
 		//dayedits = new TreeMap<Long,Long>();
 		//dayarticles = new TreeMap<Long,Long>();
@@ -144,6 +146,8 @@ public class UserProfile implements Writable {
 		out.writeLong(timeToNextEdit);
 		out.writeLong(bytesAdded);
 		out.writeLong(bytesRemoved);
+		out.writeLong(firstEdit);
+		out.writeLong(lastEdit);
 		/*
 		out.writeInt(dayedits.keySet().size());
 		for(long key : dayedits.keySet()){
