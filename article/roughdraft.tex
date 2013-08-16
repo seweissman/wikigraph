@@ -9,7 +9,8 @@
 \usepackage{algorithmicx}
 \usepackage{algorithm}
 \usepackage{authblk}
-
+\usepackage{caption}
+\usepackage{lscape}
 \begin{document}
 
 \title{Finding Bots and Spammers on Wikipedia}
@@ -87,10 +88,9 @@ It contains a timestamp, user name (or IP address). Comment, and revision size i
 We create a static profile of user behavior using a number of variables derived from the revision metadata. In order to reduce the number of users considered we filter out users with only one edit or who are active for only one day. (Also filter IP?)
 
 \begin{itemize}
-\item Number of edits and number of article edits.
-\item Distribution of edits per day
+\item Number of edits and number of articles edited.
 \item Distribution of edits over namespaces.
-\item Total number of edits
+\item Span of user activity (days)
 \item Mean net bytes added/removed over all edits
 \item Number of positive (net bytes added) edits.
 \item Number of negative (net bytes removed) edits.
@@ -99,9 +99,9 @@ We create a static profile of user behavior using a number of variables derived 
 
 In building user profiles we consider the total number of edits and total number of uniqe articles edited by a user, as well as the distribution of edits over time. We expect that bots may make significantly more edits than average and achieve these edits in a short period of time. Malicious or spam accounts may only be active over short periods of time, after which a new account is created to help avoid detection (REF?).
 
-Following West et al. (2010) we consider the time it takes for articles to be edited following a user edit, although we do not distinguish the specific case of a reversion by a privileged user. Since Wikipedia has been found to have a ``quick repair'' property (Viegas YEAR) where malicious edits are reverted quickly (often within minutes), we expect the time to next re-edit to be shorter for users making malicious edits, since these will be quickly undone. Similarly, we look at the mean net positive and negative bytes contributed by a user. Net contributions can give insight into a users behavior. Malicious users or bots may be identified by a tendency only to remove or add content.
+Following West et al. (2010) we consider the time it takes for articles to be edited following a user edit, although we do not distinguish the specific case of a reversion by a privileged user. Since Wikipedia has been found to have a ``quick repair'' property (Viegas YEAR) where malicious edits are reverted quickly (often within minutes), we expect the time to next re-edit to be shorter for users making malicious edits, since these will be quickly undone. Similarly, we look at the mean net positive and negative bytes contributed by a user. Net contributions can give insight into a users behavior. Malicious users or bots may be identified by a tendency only to remove or add content. 
 
-Followig Welser, we also consider distribution of edits over namespaces. 
+Followig Welser, we also consider distribution of edits over namespaces. Following ??? we consider span of activity from first article edit to last article edit.
 
 %Other things:
 %\begin{itemize}
@@ -126,6 +126,352 @@ Number of articles, number of users, number of edits. Average edits, average len
 
 \subsection{User profiling}
 
+To score user profiles for potential bot or spammer behavior, we make the general assumption that bots and vandals will exhibit behavior that diverges from the ``norm.'' In order to identify boundaries for normal behavior we looked at outliers in the distributions of the user profiling attributes listed above. Since most attributes exhibit a long tailed distribution, we take outliers to be the top (or bottom, where applicable) 1\% of values for each attribute. See Table \ref{bounds} for the list of extreme values for each profiling variable along with the bounds used for outliers.
+
+\begin{table}
+\begin{tabular}{l|l|l|l|l}
+Variable & Min value & Max Value & LB & UB\\
+\hline
+nedits            & 2 & 3008950 & N/A & 2350 \\
+narticles         & 1 & 2504647 & N/A & 1750\\
+nsarticleedits    & 0 & 2842613 & N/A & 2000\\
+nsadminedits      & 0 & 683585 & N/A & 350\\
+daysactive        & 2 & 4571 & 3 & N/A\\
+avgeditsperday    & 0.0004 & 1486.02 & N/A & 1.6 \\
+avgarticlesday    & 0.0002 & 1311.33 & N/A & 1.5 \\
+avgbytesadded     & 0 & 2400060 & N/A & 1.6 \\
+avgbytesremoved   & 0 & 1263370 & N/A & 1.5 \\
+bytesadded        & 0 & 1793038869 & N/A & 700000\\
+bytesremoved      & 0 & 301961193 & N/A & 40000\\
+netbytes          & -11423784 & 1790307455 & -500 & 600000\\
+avgnetbytes       & -95917.3 & 2400060 & -100 & 5600\\
+nadds             & 0 & 2949526 & N/A & 2400\\
+nremoves          & 0 & 135820 & N/A & 30\\
+avgtimetonext     & 0 & 3633.5 & N/A & 466\\
+pctnsarticleedits & 0 & 1 & .1 & .99\\
+pctnsadminedits   & 0 & 1 & N/A & .75\\
+\end{tabular}
+\caption{Bounds for profiling variables}
+\label{bounds}
+\end{table}
+
+We also looked at pairs of variables that exhibited likely linear relationships and examined values that diverged from the predictions of an associated linear model. We examined three pairs of variables: nedits/narticles ($\rho = 0.986$), pctnsadminedits/pctnsarticleedits ($\rho = 0.9164$), and  nsarticledits/nedits ($\rho = 0.9815$).
+
+\begin{figure}
+\centering
+\includegraphics[width=3.5in, keepaspectratio = true]{neditserrors.png}
+\caption*{(a) Outliers in the nedit/narticles model.}
+\includegraphics[width=3.5in, keepaspectratio = true]{articlenseditserrors.png}
+\caption*{(b) Outliers in the nsarticleedits/edits modeleee.}
+\caption{}
+\label{outliers}
+\end{figure}
+
+\subsection{Evaluating User Model}
+\subsubsection{Precision - Recall for Bots}
+
+In order to evaluate the effectiveness of each outlier measure we compared five different rankings of users:
+\begin{enumerate}
+\item Outlier score (\textbf{score}) - Using the LB/UB bounds, score a point to each user profile for a violation of any number of bounds. Rank users by points. (Users with 0 points are ranked arbitrarily following users with non-zero points.)
+\item Raw Edit count (\textbf{edits}) - Rank users by nedits variable.
+\item nsarticleedits/nedits model error (\textbf{articlens-error}) - Rank users by the difference between actual and predicted value.
+\item nedits/narticles model error (\textbf{nedits-error}) - Rank users by the difference between actual and predicted value.
+\item pctnsadminedits/pctnsarticleedits model error (\textbf{pctadmin-error}) - Rank users by the percentage difference between actual and predicted value.
+\end{enumerate}
+
+In Figure \ref{prec} we evaluate each score using a precision-recall curve for each of the five scores, using the rough criteria that any profile that matches ``bot'' (non-case sensitive) is a positive result. For low recall levels, the \textbf{artclens-error} and \textbf{nedits-error} have high precision, with an interesting initial blip in the \textbf{pctadmin-error} curve. Suprisingly, one of the worst performing measures is the combined outlier score. Raw edit count alone outperforms the combined outlier score.
+
+\begin{figure}
+\centering
+\includegraphics[width=4.5in, keepaspectratio = true]{precisionrecall.pdf}
+\caption{Precision Recall for profile scores.}
+\label{prec}
+\end{figure}
+
+\subsubsection{Manual Evaluation}
+
+To better evluate the performance of each score we manually examined the top scoring user accounts by each score.
+
+\begin{landscape}
+\begin{table}
+\begin{center}
+\tiny
+\begin{tabular}{l}
+\hline
+Outlier \\
+\hline
+MiszaBot I \\
+AlexNewArtBot \\
+West.andrew.g \\
+COIBot \\
+Mathbot \\
+Athaenara \\
+Scsbot \\
+MiszaBot II \\
+Mikhailov Kusserow \\
+WP 1.0 bot \\
+EmanWilm \\
+Ahnoneemoos \\
+Werdnabot \\
+WLU \\
+Xn4 \\
+Cyde \\
+Scott MacDonald \\
+Sango123 \\
+RickK \\
+Pcap \\
+MiszaBot III \\
+Makemi \\
+La Pianista \\
+Joseph A. Spadaro \\
+Hasteur \\
+GuillaumeTell \\
+Evanh2008 \\
+Tryptofish \\
+Doc glasgow \\
+Bobblehead \\
+Andrewa \\
+03md \\
+Zad68 \\
+SwisterTwister \\
+Steven J. Anderson \\
+Spartaz \\
+SharedIPArchiveBot \\
+PumpkinSky \\
+Proofreader77 \\
+Pomte \\
+Swatjester \\
+PCHS-NJROTC \\
+Oneiros \\
+Nsk92 \\
+Largoplazo \\
+Jax 0677 \\
+Geometry guy \\
+FF2010 \\
+Enigmaman \\
+\end{tabular}
+\begin{tabular}{l} 
+\hline
+ Edit Count \\
+\hline
+SmackBot \\
+Yobot \\
+Addbot \\
+Cydebot \\
+ClueBot NG \\
+RjwilmsiBot \\
+EmausBot \\
+Koavf \\
+ClueBot \\
+RussBot \\
+Xqbot \\
+Luckas-bot \\
+Waacstats \\
+Rich Farmbrough \\
+Lightbot \\
+SineBot \\
+AnomieBOT \\
+The Anomebot2 \\
+ZéroBot \\
+Rjwilmsi \\
+FrescoBot \\
+TXiKiBoT \\
+Woohookitty \\
+Helpful Pixie Bot \\
+Tassedethe \\
+Bearcat \\
+ListasBot \\
+Legobot \\
+Thijs!bot \\
+SporkBot \\
+Erik9bot \\
+BetacommandBot \\
+VolkovBot \\
+Fbot \\
+BOTijo \\
+Kingbotk \\
+Ser Amantio di Nicolao \\
+Hmains \\
+D6 \\
+Xenobot Mk V \\
+Alaibot \\
+SieBot \\
+BD2412 \\
+Full-date unlinking bot \\
+XLinkBot \\
+Bluebot \\
+AvicBot \\
+Magioladitis \\
+BattyBot \\
+\end{tabular}
+\begin{tabular}{l}
+\hline
+Nsarticleedits error \\
+\hline 
+SineBot \\
+Yobot \\
+ListasBot \\
+Kingbotk \\
+BetacommandBot \\
+Xenobot Mk V \\
+Fbot \\
+Erik9bot \\
+MiszaBot III \\
+Koavf \\
+Skier Dude \\
+WOSlinker \\
+TXiKiBoT \\
+MartinBotIII \\
+EdwardsBot \\
+Reedy Bot \\
+Cydebot \\
+BotMultichill \\
+TinucherianBot \\
+SatyrBot \\
+OrphanBot \\
+AnomieBOT \\
+ShepBot \\
+DASHBot \\
+Bhadani \\
+DodoBot \\
+Sfan00 IMG \\
+Kumi-Taskbot \\
+John Carter \\
+OOODDD \\
+MiszaBot I \\
+VolkovBot \\
+Gene93k \\
+MGA73bot \\
+AnnaKucsma \\
+PhotoCatBot \\
+Escarbot \\
+BJBot \\
+TonyTheTiger \\
+STTWbot \\
+MetsBot \\
+DPL bot \\
+MiszaBot II \\
+Wizardman \\
+FairuseBot \\
+Merenta \\
+Rettetast \\
+Epbr123 \\
+LaraBot \\
+\end{tabular}
+\begin{tabular}{l}
+\hline
+ Nedits error \\
+\hline
+SmackBot \\
+Addbot \\
+Cydebot \\
+SineBot \\
+EmausBot \\
+ClueBot NG \\
+Yobot \\
+Koavf \\
+MiszaBot III \\
+RussBot \\
+Helpful Pixie Bot \\
+ClueBot \\
+Lightbot \\
+BOTijo \\
+Rich Farmbrough \\
+Erik9bot \\
+EdwardsBot \\
+Fbot \\
+RjwilmsiBot \\
+Alaibot \\
+Full-date unlinking bot \\
+SporkBot \\
+ZéroBot \\
+Xenobot Mk V \\
+Legobot \\
+Ser Amantio di Nicolao \\
+AvicBot \\
+Xqbot \\
+Waacstats \\
+BattyBot \\
+Luckas-bot \\
+Kingbotk \\
+Escarbot \\
+VIAFbot \\
+Eubot \\
+TXiKiBoT \\
+MiszaBot I \\
+ListasBot \\
+Magioladitis \\
+BG19bot \\
+Vsmith \\
+FrescoBot \\
+ChrisGualtieri \\
+WOSlinker \\
+Ksnow \\
+Bgwhite \\
+Bluebot \\
+BD2412 \\
+Kwamikagami \\
+\end{tabular}
+\begin{tabular}{l}
+\hline
+pctnsadminedits error \\
+\hline 
+Jph0917 \\
+MikeWattHCP \\
+Sierra2008 \\
+Kevinsam \\
+MystBot \\
+XxXDylanWillard \\
+Brf1000 \\
+Dan1216 \\
+GundersonM \\
+Chongkian \\
+Ddrane \\
+Kai662 \\
+Ps07swt \\
+LtMuldoon \\
+Native truth \\
+Manushand \\
+Hup234 \\
+Zgystardst \\
+Fifties \\
+Antlersantlers \\
+Raulsebrook \\
+CN3777 \\
+MC32 \\
+Kippi70 \\
+Kwellyn \\
+Eloewien \\
+Enbionycacruz \\
+Bororule12 \\
+Quebec99 \\
+Thom2729 \\
+My Ovation \\
+JohnSawyer \\
+VsBot \\
+Ldaniel77 \\
+Viva britney \\
+Johnny longtorso \\
+Historynut101 \\
+Cyanolinguophile \\
+Danicalove79 \\
+Na zdravy \\
+The Brain of Pooh \\
+Eustanacio IV \\
+Midnight man \\
+Gpath1k \\
+Wukai \\
+BrightStarSky \\
+Huskertsd \\
+Filippos Greece \\
+Ronmore \\
+\end{tabular}
+\label{scorechart}
+\caption{Top scoring users for each ranking scheme}
+\end{center}
+\end{table}
+\end{landscape}
+
 \subsection{User co-edit network Visualization}
 
 After processing the revision metadata the graph includes 26251504 edges. Filtering out edges of weight 1 leaves 2611449 edges. How many nodes? Results from Weight distribution, degree centrality and weighted degree centrality.
@@ -145,3 +491,133 @@ What were some of the limitations? What are the opportunities for future work?
 \section{Reference}
 Figure out this bibtex thing.
 \end{document}
+
+
+
+%\begin{itemize}
+%\item Using outliers of the distributions of each variable, we identify 68411 with at least one outlier field. And 931427 without. Of the outlier set 832 (0.01216178684714) have account names matching ``bot'', of the non-outlier set there are 1798 (0.00193037135492).
+%\end{itemize}
+
+
+%% \begin{verbatim}
+
+%% {{"id", 0}, {"nedits", 2}, {"narticles", 1}, {"daysactive", 
+%%   2}, {"naddedits", 0}, {"nremoveedits", 0}, {"bytesadded", 
+%%   0}, {"bytesremoved", 0}, {"avgeditsday", 0.0004}, {"avgarticlesday",
+%%    0.0002}, {"avgtimetonext", 0.}, {"avgbytesadded", 
+%%   0}, {"avgbytesremoved", 
+%%   0}, {"netbytes", -11423784}, {"avgnetbytes", -95917.3}, \
+%% {"articlensedits", 0}, {"adminnsedits", 0}, {"pctarticlensedits", 
+%%   0}, {"pctadminnsedits", 0}}
+
+%% {{"id", 999835}, {"nedits", 3008950}, {"narticles", 
+%%   2504647}, {"daysactive", 4571}, {"naddedits", 
+%%   2949526}, {"nremoveedits", 135820}, {"bytesadded", 
+%%   1793038869}, {"bytesremoved", 301961193}, {"avgeditsday", 
+%%   1486.02}, {"avgarticlesday", 1311.33}, {"avgtimetonext", 
+%%   3633.5}, {"avgbytesadded", 2.40006*10^6}, {"avgbytesremoved", 
+%%   1.26337*10^6}, {"netbytes", 1790307455}, {"avgnetbytes", 
+%%   2.40006*10^6}, {"articlensedits", 2842613}, {"adminnsedits", 
+%%   683585}, {"pctarticlensedits", 1}, {"pctadminnsedits", 1}}
+
+
+%% === Run information ===
+
+%% Scheme:weka.classifiers.functions.LinearRegression -S 0 -R 1.0E-8
+%% Relation:     wikiprofile.noip.nohist.vector-weka.filters.unsupervised.attribute.Remove-R4-15
+%% Instances:    999836
+%% Attributes:   3
+%%               id
+%%               nedits
+%%               narticles
+%% Test mode:10-fold cross-validation
+
+%% === Classifier model (full training set) ===
+
+
+%% Linear Regression Model
+
+%% nedits =
+
+%%       1.2311 * narticles +
+%%       3.5835
+
+%% Time taken to build model: 1.67 seconds
+
+%% === Cross-validation ===
+%% === Summary ===
+
+%% Correlation coefficient                  0.986 
+%% Mean absolute error                     33.47  
+%% Root mean squared error               1208.4059
+%% Relative absolute error                 10.0365 %
+%% Root relative squared error             16.7038 %
+%% Total Number of Instances           999836     
+
+%% === Run information ===
+
+%% Scheme:weka.classifiers.functions.LinearRegression -S 0 -R 1.0E-8
+%% Relation:     wikiprofile.noip.vector-weka.filters.unsupervised.attribute.Remove-R2-17
+%% Instances:    999836
+%% Attributes:   3
+%%               id
+%%               pctarticlensedits
+%%               pctadminnsedits
+%% Test mode:10-fold cross-validation
+
+%% === Classifier model (full training set) ===
+
+
+%% Linear Regression Model
+
+%% pctadminnsedits =
+
+%%      -0.8621 * pctarticlensedits +
+%%       0.8579
+
+%% Time taken to build model: 2.82 seconds
+
+%% === Cross-validation ===
+%% === Summary ===
+
+%% Correlation coefficient                  0.9164
+%% Mean absolute error                      0.0405
+%% Root mean squared error                  0.0943
+%% Relative absolute error                 22.9393 %
+%% Root relative squared error             40.0244 %
+%% Total Number of Instances           999836     
+
+%% === Run information ===
+
+%% Scheme:weka.classifiers.functions.LinearRegression -S 0 -R 1.0E-8
+%% Relation:     wikiprofile.noip.vector-weka.filters.unsupervised.attribute.Remove-R3-15,17-19
+%% Instances:    999836
+%% Attributes:   3
+%%               id
+%%               nedits
+%%               articlensedits
+%% Test mode:10-fold cross-validation
+
+%% === Classifier model (full training set) ===
+
+
+%% Linear Regression Model
+
+%% articlensedits =
+
+%%       0.8607 * nedits +
+%%     -12.0717
+
+%% Time taken to build model: 1.63 seconds
+
+%% === Cross-validation ===
+%% === Summary ===
+
+%% Correlation coefficient                  0.9815
+%% Mean absolute error                     35.0435
+%% Root mean squared error               1211.6506
+%% Relative absolute error                 13.2126 %
+%% Root relative squared error             19.1423 %
+%% Total Number of Instances           999836     
+%% \end{verbatim}
+
